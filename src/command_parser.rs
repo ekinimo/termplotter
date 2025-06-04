@@ -8,6 +8,7 @@ use crate::{
     definition::EDefinition,
     expression::EExpression,
     expression_parser::*,
+    parametric2d::EParametric2D,
     parser_common::{identity, ParseErrors, State},
     range::ERange,
 };
@@ -16,7 +17,7 @@ pub type CommandParseResult<'a> = Result<(Command, State, Chars<'a>), ParseError
 
 impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
     fn parse(&self, input: Chars<'a>, state: State) -> CommandParseResult<'a> {
-        // Try parsing the full command with all parts
+        // Try parsing the full command with all parts (expression)
         let full_command = EDefinition
             .pair(EExpression)
             .with_error(|err, _i| err.fold(identity, identity))
@@ -24,7 +25,17 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
             .with_error(|err, _i| err.fold(identity, identity))
             .pair(ECommandOption)
             .with_error(|err, _i| err.fold(identity, identity))
-            .transform(|(((def, expr), range), options)| Command::new(def, expr, range, options));
+            .transform(|(((def, expr), range), options)| Command::new_expression(def, expr, range, options));
+
+        // Try parsing the full parametric command with all parts
+        let full_parametric_command = EDefinition
+            .pair(EParametric2D)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .pair(ERange)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .pair(ECommandOption)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .transform(|(((def, parametric), range), options)| Command::new_parametric(def, parametric, range, options));
 
         // Try parsing without command options (use defaults)
         let simple_command = EDefinition
@@ -33,7 +44,17 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
             .pair(ERange)
             .with_error(|err, _i| err.fold(identity, identity))
             .transform(|((def, expr), range)| {
-                Command::new(def, expr, range, CommandOptions::default())
+                Command::new_expression(def, expr, range, CommandOptions::default())
+            });
+
+        // Try parsing parametric without command options (use defaults)
+        let simple_parametric_command = EDefinition
+            .pair(EParametric2D)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .pair(ERange)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .transform(|((def, parametric), range)| {
+                Command::new_parametric(def, parametric, range, CommandOptions::default())
             });
 
         // Try parsing expression with range only (no definitions)
@@ -43,7 +64,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
             .pair(ECommandOption)
             .with_error(|err, _i| err.fold(identity, identity))
             .transform(|((expr, range), options)| {
-                Command::new(
+                Command::new_expression(
                     crate::definition::Definition::new(
                         std::collections::HashMap::new(),
                         std::collections::HashMap::new(),
@@ -59,7 +80,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
             .pair(ERange)
             .with_error(|err, _i| err.fold(identity, identity))
             .transform(|(expr, range)| {
-                Command::new(
+                Command::new_expression(
                     crate::definition::Definition::new(
                         std::collections::HashMap::new(),
                         std::collections::HashMap::new(),
@@ -70,9 +91,51 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
                 )
             });
 
+        // Try parsing parametric with range only (no definitions)
+        let parametric_with_range = EParametric2D
+            .pair(ERange)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .pair(ECommandOption)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .transform(|((parametric, range), options)| {
+                Command::new_parametric(
+                    crate::definition::Definition::new(
+                        std::collections::HashMap::new(),
+                        std::collections::HashMap::new(),
+                    ),
+                    parametric,
+                    range,
+                    options,
+                )
+            });
+
+        // Try parsing parametric with range only (no definitions, no options)
+        let simple_parametric_with_range = EParametric2D
+            .pair(ERange)
+            .with_error(|err, _i| err.fold(identity, identity))
+            .transform(|(parametric, range)| {
+                Command::new_parametric(
+                    crate::definition::Definition::new(
+                        std::collections::HashMap::new(),
+                        std::collections::HashMap::new(),
+                    ),
+                    parametric,
+                    range,
+                    CommandOptions::default(),
+                )
+            });
+
         // Try all variants in order of complexity
         full_command
+            .or_else(full_parametric_command)
+            .with_error_using_state(|err, st, _i| {
+                ParseErrors::Both(st.start, st.end, Box::new(err))
+            })
             .or_else(simple_command)
+            .with_error_using_state(|err, st, _i| {
+                ParseErrors::Both(st.start, st.end, Box::new(err))
+            })
+            .or_else(simple_parametric_command)
             .with_error_using_state(|err, st, _i| {
                 ParseErrors::Both(st.start, st.end, Box::new(err))
             })
@@ -80,7 +143,15 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
             .with_error_using_state(|err, st, _i| {
                 ParseErrors::Both(st.start, st.end, Box::new(err))
             })
+            .or_else(parametric_with_range)
+            .with_error_using_state(|err, st, _i| {
+                ParseErrors::Both(st.start, st.end, Box::new(err))
+            })
             .or_else(simple_expr_with_range)
+            .with_error_using_state(|err, st, _i| {
+                ParseErrors::Both(st.start, st.end, Box::new(err))
+            })
+            .or_else(simple_parametric_with_range)
             .with_error_using_state(|err, st, _i| {
                 ParseErrors::Both(st.start, st.end, Box::new(err))
             })

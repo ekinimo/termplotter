@@ -4,6 +4,7 @@ use crate::{
     command::Command,
     command_options::{DisplayOption, OutputOptions},
     values::ExpressionRange1dResult,
+    parametric2d::Parametric2DResult,
 };
 
 pub trait DisplayRenderer {
@@ -14,6 +15,13 @@ pub trait DisplayRenderer {
         height: usize,
         x_range: &ExpressionRange1dResult,
     ) -> String;
+
+    fn render_parametric(
+        &self,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> String;
 }
 
 pub trait OutputWriter {
@@ -22,6 +30,14 @@ pub trait OutputWriter {
         filename: &str,
         x_result: &ExpressionRange1dResult,
         y_result: &ExpressionRange1dResult,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn Error>>;
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
         width: usize,
         height: usize,
     ) -> Result<(), Box<dyn Error>>;
@@ -136,6 +152,104 @@ impl Bitmap {
             x_min,
             x_max,
         );
+    }
+
+    pub fn create_parametric_plot(
+        &mut self,
+        parametric_result: &Parametric2DResult,
+        margin: usize,
+    ) {
+        if parametric_result.is_empty() {
+            return;
+        }
+
+        let plot_width = self.width.saturating_sub(2 * margin);
+        let plot_height = self.height.saturating_sub(2 * margin);
+
+        if plot_width == 0 || plot_height == 0 {
+            return;
+        }
+
+        let x_min = parametric_result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let x_max = parametric_result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let y_min = parametric_result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let y_max = parametric_result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        let x_range = x_max - x_min;
+        let y_range = y_max - y_min;
+
+        if x_range.abs() < f64::EPSILON || y_range.abs() < f64::EPSILON {
+            return;
+        }
+
+        let mut points = Vec::new();
+        for (&x_val, &y_val) in parametric_result.x_values.iter().zip(parametric_result.y_values.iter()) {
+            let x_pos = margin + ((x_val - x_min) / x_range * plot_width as f64) as usize;
+            let y_pos = margin + ((y_max - y_val) / y_range * plot_height as f64) as usize;
+            let x_pos = x_pos.min(margin + plot_width - 1);
+            let y_pos = y_pos.min(margin + plot_height - 1);
+            points.push((x_pos, y_pos));
+        }
+
+        // Draw lines connecting parametric points
+        for i in 1..points.len() {
+            self.draw_line(
+                points[i - 1].0,
+                points[i - 1].1,
+                points[i].0,
+                points[i].1,
+                1,
+            );
+        }
+
+        // Draw points
+        for &(x, y) in &points {
+            self.set_pixel(x, y, 1);
+            for dx in 0..=1 {
+                for dy in 0..=1 {
+                    self.set_pixel(x.saturating_add(dx), y.saturating_add(dy), 1);
+                    self.set_pixel(x.saturating_sub(dx), y.saturating_sub(dy), 1);
+                }
+            }
+        }
+
+        self.draw_axes_and_grid(margin, plot_width, plot_height);
+
+        self.add_parametric_value_labels(
+            margin,
+            plot_width,
+            plot_height,
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+        );
+    }
+
+    fn add_parametric_value_labels(
+        &mut self,
+        margin: usize,
+        plot_width: usize,
+        plot_height: usize,
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+    ) {
+        for i in 0..=5 {
+            let y = margin + (i * plot_height) / 5;
+            let value = y_max - (i as f64 / 5.0) * (y_max - y_min);
+            let text = format!("{:.1}", value);
+            self.render_text(&text, margin.saturating_sub(40), y.saturating_sub(3), 4);
+        }
+
+        for i in 0..=5 {
+            let x = margin + (i * plot_width) / 5;
+            let value = x_min + (i as f64 / 5.0) * (x_max - x_min);
+            let text = format!("{:.1}", value);
+            let text_x = x.saturating_sub(text.len() * 3);
+            self.render_text(&text, text_x, margin + plot_height + 5, 4);
+        }
     }
 
     fn draw_line(&mut self, x0: usize, y0: usize, x1: usize, y1: usize, color: u8) {
@@ -311,6 +425,66 @@ impl DisplayRenderer for AsciiRenderer {
             x_range,
         )
     }
+
+    fn render_parametric(
+        &self,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> String {
+        if result.is_empty() {
+            return "No parametric data to plot".to_string();
+        }
+
+        let x_min = result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let x_max = result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let y_min = result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let y_max = result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        let x_range = x_max - x_min;
+        let y_range = y_max - y_min;
+
+        if x_range.abs() < f64::EPSILON || y_range.abs() < f64::EPSILON {
+            return format!(
+                "Parametric plot: X=[{:.3}, {:.3}], Y=[{:.3}, {:.3}] (constant values)",
+                x_min, x_max, y_min, y_max
+            );
+        }
+
+        let mut grid = vec![vec![' '; width]; height];
+        let padding_x = x_range * 0.1;
+        let padding_y = y_range * 0.1;
+        let plot_x_min = x_min - padding_x;
+        let plot_x_max = x_max + padding_x;
+        let plot_y_min = y_min - padding_y;
+        let plot_y_max = y_max + padding_y;
+        let plot_x_range = plot_x_max - plot_x_min;
+        let plot_y_range = plot_y_max - plot_y_min;
+
+        // Plot parametric data points
+        let data_width = width.saturating_sub(6);
+        for (&x_val, &y_val) in result.x_values.iter().zip(result.y_values.iter()) {
+            let x_pos = 5 + ((x_val - plot_x_min) / plot_x_range * data_width as f64) as usize;
+            let y_pos = ((plot_y_max - y_val) / plot_y_range * (height - 1) as f64) as usize;
+            
+            if x_pos < width && y_pos < height {
+                grid[y_pos][x_pos] = '*';
+            }
+        }
+
+        // Add axes and labels for parametric plots
+        add_ascii_parametric_axes(&mut grid, width, height, plot_x_min, plot_x_max, plot_y_min, plot_y_max);
+        
+        format_ascii_parametric_output(
+            grid,
+            width,
+            result.len(),
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+        )
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -381,6 +555,69 @@ impl DisplayRenderer for AnsiRenderer {
             min_val,
             max_val,
             x_range,
+        )
+    }
+
+    fn render_parametric(
+        &self,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> String {
+        if result.is_empty() {
+            return "\x1b[31mNo parametric data to plot\x1b[0m".to_string();
+        }
+
+        let x_min = result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let x_max = result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let y_min = result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let y_max = result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        let x_range = x_max - x_min;
+        let y_range = y_max - y_min;
+
+        if x_range.abs() < f64::EPSILON || y_range.abs() < f64::EPSILON {
+            return format!(
+                "\x1b[33mParametric plot: X=[{:.3}, {:.3}], Y=[{:.3}, {:.3}] (constant values)\x1b[0m",
+                x_min, x_max, y_min, y_max
+            );
+        }
+
+        let mut grid = vec![vec![' '; width]; height];
+        let mut colors = vec![vec![0u8; width]; height];
+        let padding_x = x_range * 0.1;
+        let padding_y = y_range * 0.1;
+        let plot_x_min = x_min - padding_x;
+        let plot_x_max = x_max + padding_x;
+        let plot_y_min = y_min - padding_y;
+        let plot_y_max = y_max + padding_y;
+        let plot_x_range = plot_x_max - plot_x_min;
+        let plot_y_range = plot_y_max - plot_y_min;
+
+        // Plot parametric data points
+        let data_width = width.saturating_sub(6);
+        for (&x_val, &y_val) in result.x_values.iter().zip(result.y_values.iter()) {
+            let x_pos = 5 + ((x_val - plot_x_min) / plot_x_range * data_width as f64) as usize;
+            let y_pos = ((plot_y_max - y_val) / plot_y_range * (height - 1) as f64) as usize;
+            
+            if x_pos < width && y_pos < height {
+                grid[y_pos][x_pos] = '●';
+                colors[y_pos][x_pos] = 1;
+            }
+        }
+
+        // Add axes and labels for parametric plots
+        add_ansi_parametric_axes(&mut grid, &mut colors, width, height, plot_x_min, plot_x_max, plot_y_min, plot_y_max);
+        
+        format_ansi_parametric_output(
+            grid,
+            colors,
+            width,
+            result.len(),
+            x_min,
+            x_max,
+            y_min,
+            y_max,
         )
     }
 }
@@ -607,6 +844,188 @@ fn regis_plot_data(result: &ExpressionRange1dResult, width: usize, height: usize
     output
 }
 
+fn regis_parametric_grid_and_axes(
+    result: &Parametric2DResult,
+    width: usize,
+    height: usize,
+) -> String {
+    let mut output = String::new();
+
+    let x_min = result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let x_max = result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let y_min = result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let y_max = result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+    let x_range = x_max - x_min;
+    let y_range = y_max - y_min;
+
+    let x_padding = if x_range > 0.0 { x_range * 0.1 } else { 1.0 };
+    let y_padding = if y_range > 0.0 { y_range * 0.1 } else { 1.0 };
+    let plot_x_min = x_min - x_padding;
+    let plot_x_max = x_max + x_padding;
+    let plot_y_min = y_min - y_padding;
+    let plot_y_max = y_max + y_padding;
+    let plot_x_range = plot_x_max - plot_x_min;
+    let plot_y_range = plot_y_max - plot_y_min;
+
+    let data_to_screen_x = |x_data: f64| -> usize {
+        if plot_x_range > 0.0 {
+            ((x_data - plot_x_min) / plot_x_range * width as f64) as usize
+        } else {
+            width / 2
+        }
+    };
+
+    let data_to_screen_y = |y_data: f64| -> usize {
+        if plot_y_range > 0.0 {
+            let normalized = (y_data - plot_y_min) / plot_y_range;
+            ((1.0 - normalized) * height as f64) as usize
+        } else {
+            height / 2
+        }
+    };
+
+    // Draw grid lines
+    output.push_str("W(P3)\nS(C2)\n");
+    for i in 1..10 {
+        let x = (i * width) / 10;
+        output.push_str(&format!("P[{},0]\nV[{},{}]\n", x, x, height));
+    }
+    for i in 1..8 {
+        let y = (i * height) / 8;
+        output.push_str(&format!("P[0,{}]\nV[{},{}]\n", y, width, y));
+    }
+
+    // Draw axes
+    output.push_str("W(P0)\nS(C1)\n");
+    
+    // X-axis (horizontal line at y=0 if 0 is in range)
+    let x_axis_y = if plot_y_min <= 0.0 && plot_y_max >= 0.0 {
+        data_to_screen_y(0.0)
+    } else {
+        height - 1
+    };
+    output.push_str(&format!("P[0,{}]\nV[{},{}]\n", x_axis_y, width, x_axis_y));
+    
+    // Y-axis (vertical line at x=0 if 0 is in range)
+    let y_axis_x = if plot_x_min <= 0.0 && plot_x_max >= 0.0 {
+        data_to_screen_x(0.0)
+    } else {
+        0
+    };
+    output.push_str(&format!("P[{},0]\nV[{},{}]\n", y_axis_x, y_axis_x, height));
+
+    // Add axis labels
+    output.push_str("W(P2)\nS(C1)\n");
+
+    // X-axis labels
+    for i in 0..=5 {
+        let x_screen = (i * width) / 5;
+        let x_data = plot_x_min + (i as f64 / 5.0) * plot_x_range;
+        let label_y = (x_axis_y + 20).min(height - 10);
+
+        let label = if x_data.abs() < 0.01 {
+            "0".to_string()
+        } else if x_data.abs() >= 1000.0 {
+            format!("{:.0}", x_data)
+        } else if x_data.fract() == 0.0 {
+            format!("{:.0}", x_data)
+        } else {
+            format!("{:.1}", x_data)
+        };
+
+        let text_x = x_screen.saturating_sub(label.len() * 3);
+        output.push_str(&format!("P[{},{}]\nT(S1)'{}'\n", text_x, label_y, label));
+    }
+
+    // Y-axis labels
+    for i in 0..=5 {
+        let y_screen = (i * height) / 5;
+        let y_data = plot_y_max - (i as f64 / 5.0) * plot_y_range;
+        let label_x = y_axis_x.saturating_sub(30).max(5);
+
+        let label = if y_data.abs() < 0.01 {
+            "0".to_string()
+        } else if y_data.abs() >= 1000.0 {
+            format!("{:.0}", y_data)
+        } else {
+            format!("{:.2}", y_data)
+        };
+
+        let text_y = y_screen.saturating_sub(5);
+        output.push_str(&format!("P[{},{}]\nT(S1)'{}'\n", label_x, text_y, label));
+    }
+
+    // Add plot info
+    output.push_str(&format!("P[5,15]\nT(S2)'Parametric Plot: {} points'\n", result.len()));
+    output.push_str(&format!("P[5,30]\nT(S2)'X: {:.2} to {:.2}'\n", x_min, x_max));
+    output.push_str(&format!("P[5,45]\nT(S2)'Y: {:.2} to {:.2}'\n", y_min, y_max));
+
+    output
+}
+
+fn regis_parametric_plot(result: &Parametric2DResult, width: usize, height: usize) -> String {
+    if result.is_empty() {
+        return String::new();
+    }
+
+    let mut output = String::new();
+    output.push_str("W(P1)\nS(C3)\n");
+
+    let x_min = result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let x_max = result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let y_min = result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let y_max = result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+    let x_range = x_max - x_min;
+    let y_range = y_max - y_min;
+
+    if x_range.abs() < f64::EPSILON || y_range.abs() < f64::EPSILON {
+        return output;
+    }
+
+    // Add padding to match the axes coordinate system
+    let x_padding = x_range * 0.1;
+    let y_padding = y_range * 0.1;
+    let plot_x_min = x_min - x_padding;
+    let plot_x_max = x_max + x_padding;
+    let plot_y_min = y_min - y_padding;
+    let plot_y_max = y_max + y_padding;
+    let plot_x_range = plot_x_max - plot_x_min;
+    let plot_y_range = plot_y_max - plot_y_min;
+
+    let data_to_screen_x = |x_val: f64| -> usize {
+        if plot_x_range > 0.0 {
+            ((x_val - plot_x_min) / plot_x_range * width as f64) as usize
+        } else {
+            width / 2
+        }
+    };
+
+    let data_to_screen_y = |y_val: f64| -> usize {
+        if plot_y_range > 0.0 {
+            let normalized = (y_val - plot_y_min) / plot_y_range;
+            ((1.0 - normalized) * height as f64) as usize
+        } else {
+            height / 2
+        }
+    };
+
+    if let (Some(&first_x), Some(&first_y)) = (result.x_values.first(), result.y_values.first()) {
+        let x0 = data_to_screen_x(first_x);
+        let y0 = data_to_screen_y(first_y);
+        output.push_str(&format!("P[{},{}]\n", x0, y0));
+
+        for (&x_val, &y_val) in result.x_values.iter().zip(result.y_values.iter()).skip(1) {
+            let x = data_to_screen_x(x_val);
+            let y = data_to_screen_y(y_val);
+            output.push_str(&format!("V[{},{}]\n", x, y));
+        }
+    }
+
+    output
+}
+
 impl DisplayRenderer for RegisRenderer {
     fn render(
         &self,
@@ -623,6 +1042,24 @@ impl DisplayRenderer for RegisRenderer {
         output.push_str(&regis_init(width, height));
         output.push_str(&regis_draw_grid_and_axes(width, height, result, x_range));
         output.push_str(&regis_plot_data(result, width, height));
+        output.push_str(&regis_finish());
+        output
+    }
+
+    fn render_parametric(
+        &self,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> String {
+        if result.is_empty() {
+            return "No parametric data to plot".to_string();
+        }
+
+        let mut output = String::new();
+        output.push_str(&regis_init(width, height));
+        output.push_str(&regis_parametric_grid_and_axes(result, width, height));
+        output.push_str(&regis_parametric_plot(result, width, height));
         output.push_str(&regis_finish());
         output
     }
@@ -652,6 +1089,26 @@ impl DisplayRenderer for SixelRenderer {
 
         bitmap_to_sixel(&bitmap, result)
     }
+
+    fn render_parametric(
+        &self,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> String {
+        if result.is_empty() {
+            return "No parametric data to plot".to_string();
+        }
+
+        let margin = 50;
+        let total_width = width + 2 * margin;
+        let total_height = height + 2 * margin;
+
+        let mut bitmap = Bitmap::new(total_width, total_height, 0);
+        bitmap.create_parametric_plot(result, margin);
+
+        bitmap_to_sixel(&bitmap, &ExpressionRange1dResult::from(result.y_values.clone()))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -669,6 +1126,21 @@ impl OutputWriter for CsvWriter {
         let mut file = std::fs::File::create(filename)?;
         writeln!(file, "x,y")?;
         for (&x_val, &y_val) in x_result.0.iter().zip(y_result.0.iter()) {
+            writeln!(file, "{},{}", x_val, y_val)?;
+        }
+        Ok(())
+    }
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
+        _width: usize,
+        _height: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut file = std::fs::File::create(filename)?;
+        writeln!(file, "x,y")?;
+        for (&x_val, &y_val) in result.x_values.iter().zip(result.y_values.iter()) {
             writeln!(file, "{},{}", x_val, y_val)?;
         }
         Ok(())
@@ -693,6 +1165,40 @@ impl OutputWriter for PpmWriter {
 
         let mut bitmap = Bitmap::new(total_width, total_height, 0);
         bitmap.create_plot(y_result, x_result, margin);
+
+        let mut file = std::fs::File::create(filename)?;
+        writeln!(file, "P3\n{} {}\n255", total_width, total_height)?;
+
+        for y in 0..total_height {
+            for x in 0..total_width {
+                let (r, g, b) = match bitmap.get_pixel(x, y) {
+                    0 => (0, 0, 0),
+                    1 => (0, 255, 255),
+                    2 => (64, 64, 64),
+                    3 => (255, 255, 0),
+                    4 => (192, 192, 192),
+                    _ => (255, 0, 0),
+                };
+                write!(file, "{} {} {} ", r, g, b)?;
+            }
+            writeln!(file)?;
+        }
+        Ok(())
+    }
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        let margin = 50;
+        let total_width = width + 2 * margin;
+        let total_height = height + 2 * margin;
+
+        let mut bitmap = Bitmap::new(total_width, total_height, 0);
+        bitmap.create_parametric_plot(result, margin);
 
         let mut file = std::fs::File::create(filename)?;
         writeln!(file, "P3\n{} {}\n255", total_width, total_height)?;
@@ -853,6 +1359,69 @@ impl OutputWriter for SvgWriter {
         writeln!(file, "</svg>")?;
         Ok(())
     }
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut file = std::fs::File::create(filename)?;
+        let margin = 50;
+        let plot_width = width - 2 * margin;
+        let plot_height = height - 2 * margin;
+
+        writeln!(file, r#"<?xml version="1.0" encoding="UTF-8"?>"#)?;
+        writeln!(
+            file,
+            r#"<svg width="{}" height="{}" xmlns="http://www.w3.org/2000/svg">"#,
+            width, height
+        )?;
+        writeln!(
+            file,
+            r#"<rect width="{}" height="{}" fill="black"/>"#,
+            width, height
+        )?;
+
+        if !result.is_empty() {
+            let x_min = result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+            let x_max = result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+            let y_min = result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+            let y_max = result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+            let x_range = x_max - x_min;
+            let y_range = y_max - y_min;
+
+            // Plot parametric data
+            if x_range > f64::EPSILON && y_range > f64::EPSILON {
+                let mut path_data = String::new();
+                for (i, (&x_val, &y_val)) in result.x_values.iter().zip(result.y_values.iter()).enumerate() {
+                    let x_svg = margin + ((x_val - x_min) / x_range * plot_width as f64) as usize;
+                    let y_svg = margin + (((y_max - y_val) / y_range) * plot_height as f64) as usize;
+
+                    if i == 0 {
+                        path_data.push_str(&format!("M {} {}", x_svg, y_svg));
+                    } else {
+                        path_data.push_str(&format!(" L {} {}", x_svg, y_svg));
+                    }
+
+                    writeln!(
+                        file,
+                        r#"<circle cx="{}" cy="{}" r="2" fill="cyan"/>"#,
+                        x_svg, y_svg
+                    )?;
+                }
+                writeln!(
+                    file,
+                    r#"<path d="{}" fill="none" stroke="cyan" stroke-width="2"/>"#,
+                    path_data
+                )?;
+            }
+        }
+
+        writeln!(file, "</svg>")?;
+        Ok(())
+    }
 }
 #[derive(Clone, Debug)]
 pub struct LatexWriter;
@@ -910,6 +1479,54 @@ impl OutputWriter for LatexWriter {
         writeln!(file, r"\end{{document}}")?;
         Ok(())
     }
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut file = std::fs::File::create(filename)?;
+
+        writeln!(file, r"\documentclass{{article}}")?;
+        writeln!(file, r"\usepackage{{pgfplots}}")?;
+        writeln!(file, r"\pgfplotsset{{compat=1.18}}")?;
+        writeln!(file, r"\begin{{document}}")?;
+        writeln!(file, r"\begin{{tikzpicture}}")?;
+        writeln!(file, r"\begin{{axis}}[")?;
+        writeln!(
+            file,
+            r"    width={}cm, height={}cm,",
+            width as f64 / 100.0,
+            height as f64 / 100.0
+        )?;
+        writeln!(file, r"    xlabel={{X}}, ylabel={{Y}},")?;
+
+        let x_min = result.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let x_max = result.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let y_min = result.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let y_max = result.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        writeln!(file, r"    xmin={:.3}, xmax={:.3},", x_min, x_max)?;
+        writeln!(file, r"    ymin={:.3}, ymax={:.3},", y_min, y_max)?;
+        writeln!(file, r"    grid=major")?;
+        writeln!(file, r"]")?;
+
+        writeln!(
+            file,
+            r"\addplot[red, mark=*, mark size=1pt] coordinates {{"
+        )?;
+        for (&x_val, &y_val) in result.x_values.iter().zip(result.y_values.iter()) {
+            writeln!(file, "    ({:.6}, {:.6})", x_val, y_val)?;
+        }
+        writeln!(file, r"}};")?;
+
+        writeln!(file, r"\end{{axis}}")?;
+        writeln!(file, r"\end{{tikzpicture}}")?;
+        writeln!(file, r"\end{{document}}")?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -929,6 +1546,19 @@ impl OutputWriter for SixelWriter {
         write!(file, "{}", sixel_output)?;
         Ok(())
     }
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut file = std::fs::File::create(filename)?;
+        let sixel_output = SixelRenderer.render_parametric(result, width, height);
+        write!(file, "{}", sixel_output)?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -945,6 +1575,19 @@ impl OutputWriter for RegisWriter {
     ) -> Result<(), Box<dyn Error>> {
         let mut file = std::fs::File::create(filename)?;
         let regis_output = RegisRenderer.render(y_result, width, height, x_result);
+        write!(file, "{}", regis_output)?;
+        Ok(())
+    }
+
+    fn write_parametric(
+        &self,
+        filename: &str,
+        result: &Parametric2DResult,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut file = std::fs::File::create(filename)?;
+        let regis_output = RegisRenderer.render_parametric(result, width, height);
         write!(file, "{}", regis_output)?;
         Ok(())
     }
@@ -1249,6 +1892,194 @@ fn bitmap_to_sixel(bitmap: &Bitmap, result: &ExpressionRange1dResult) -> String 
     // Add text summary
     output.push_str(&format!("\nSixel Plot: {} data points\n", result.0.len()));
     output.push_str("   🟢 Data line  🟡 Axes & ticks  ⬜ Grid lines  ⬛ Plot area\n");
+
+    output
+}
+
+fn add_ansi_parametric_axes(
+    grid: &mut Vec<Vec<char>>,
+    colors: &mut Vec<Vec<u8>>,
+    width: usize,
+    height: usize,
+    plot_x_min: f64,
+    plot_x_max: f64,
+    plot_y_min: f64,
+    plot_y_max: f64,
+) {
+    // X-axis (check if 0 is in range)
+    if plot_y_min <= 0.0 && plot_y_max >= 0.0 {
+        let plot_y_range = plot_y_max - plot_y_min;
+        let zero_y = ((plot_y_max - 0.0) / plot_y_range * (height - 1) as f64) as usize;
+        if zero_y < height {
+            for x in 5..width {
+                if grid[zero_y][x] == ' ' {
+                    grid[zero_y][x] = '─';
+                    colors[zero_y][x] = 3;
+                }
+            }
+        }
+    }
+
+    // Y-axis (check if 0 is in range)
+    if plot_x_min <= 0.0 && plot_x_max >= 0.0 {
+        let plot_x_range = plot_x_max - plot_x_min;
+        let zero_x = 5 + ((0.0 - plot_x_min) / plot_x_range * (width - 6) as f64) as usize;
+        if zero_x < width {
+            for y in 0..height {
+                if grid[y][zero_x] == ' ' {
+                    grid[y][zero_x] = '│';
+                    colors[y][zero_x] = 2;
+                }
+            }
+        }
+    }
+
+    // Y-axis labels on the left
+    for i in 0..5 {
+        let y = i * (height - 1) / 4;
+        let value = plot_y_max - (i as f64 / 4.0) * (plot_y_max - plot_y_min);
+        let label = format!("{:4.1}", value);
+        for (j, ch) in label.chars().enumerate() {
+            if j < 4 && y < height {
+                grid[y][j] = ch;
+                colors[y][j] = 2;
+            }
+        }
+    }
+}
+
+fn format_ansi_parametric_output(
+    grid: Vec<Vec<char>>,
+    colors: Vec<Vec<u8>>,
+    width: usize,
+    data_points: usize,
+    x_min: f64,
+    x_max: f64,
+    y_min: f64,
+    y_max: f64,
+) -> String {
+    let mut output = format!(
+        "\x1b[36m┌─ ANSI Parametric Plot: {} points, X:[{:.2}, {:.2}], Y:[{:.2}, {:.2}] ─┐\x1b[0m\n",
+        data_points, x_min, x_max, y_min, y_max
+    );
+
+    for (row, color_row) in grid.into_iter().zip(colors.into_iter()) {
+        output.push_str("\x1b[36m│\x1b[0m");
+        for (ch, color) in row.into_iter().zip(color_row.into_iter()) {
+            match color {
+                1 => output.push_str(&format!("\x1b[92m{}\x1b[0m", ch)), // Green data
+                2 => output.push_str(&format!("\x1b[37m{}\x1b[0m", ch)), // White axes
+                3 => output.push_str(&format!("\x1b[93m{}\x1b[0m", ch)), // Yellow zero line
+                _ => output.push(ch),
+            }
+        }
+        output.push_str("\x1b[36m│\x1b[0m\n");
+    }
+
+    output.push_str("\x1b[36m└");
+    output.push_str(&"─".repeat(width + 1));
+    output.push_str("┘\x1b[0m\n");
+
+    // X-axis labels
+    output.push_str("\x1b[37mX: \x1b[0m");
+    for i in 0..5 {
+        let x_value = x_min + (i as f64 / 4.0) * (x_max - x_min);
+        if i == 0 {
+            output.push_str("  ");
+        } else {
+            output.push_str("              ");
+        }
+        output.push_str(&format!("\x1b[93m{:.1}\x1b[0m", x_value));
+    }
+    output.push('\n');
+
+    output
+}
+
+fn add_ascii_parametric_axes(
+    grid: &mut Vec<Vec<char>>,
+    width: usize,
+    height: usize,
+    plot_x_min: f64,
+    plot_x_max: f64,
+    plot_y_min: f64,
+    plot_y_max: f64,
+) {
+    // X-axis (check if 0 is in range)
+    if plot_y_min <= 0.0 && plot_y_max >= 0.0 {
+        let plot_y_range = plot_y_max - plot_y_min;
+        let zero_y = ((plot_y_max - 0.0) / plot_y_range * (height - 1) as f64) as usize;
+        if zero_y < height {
+            for x in 5..width {
+                if grid[zero_y][x] == ' ' {
+                    grid[zero_y][x] = '-';
+                }
+            }
+        }
+    }
+
+    // Y-axis (check if 0 is in range)
+    if plot_x_min <= 0.0 && plot_x_max >= 0.0 {
+        let plot_x_range = plot_x_max - plot_x_min;
+        let zero_x = 5 + ((0.0 - plot_x_min) / plot_x_range * (width - 6) as f64) as usize;
+        if zero_x < width {
+            for y in 0..height {
+                if grid[y][zero_x] == ' ' {
+                    grid[y][zero_x] = '|';
+                }
+            }
+        }
+    }
+
+    // Y-axis labels on the left
+    for i in 0..5 {
+        let y = i * (height - 1) / 4;
+        let value = plot_y_max - (i as f64 / 4.0) * (plot_y_max - plot_y_min);
+        let label = format!("{:4.1}", value);
+        for (j, ch) in label.chars().enumerate() {
+            if j < 4 && y < height {
+                grid[y][j] = ch;
+            }
+        }
+    }
+}
+
+fn format_ascii_parametric_output(
+    grid: Vec<Vec<char>>,
+    width: usize,
+    data_points: usize,
+    x_min: f64,
+    x_max: f64,
+    y_min: f64,
+    y_max: f64,
+) -> String {
+    let mut output = format!(
+        "┌─ ASCII Parametric Plot: {} points, X:[{:.2}, {:.2}], Y:[{:.2}, {:.2}] ─┐\n",
+        data_points, x_min, x_max, y_min, y_max
+    );
+
+    for row in grid {
+        output.push('│');
+        output.push_str(&row.into_iter().collect::<String>());
+        output.push_str("│\n");
+    }
+
+    output.push_str("└");
+    output.push_str(&"─".repeat(width + 1));
+    output.push_str("┘\n");
+
+    // X-axis labels
+    output.push_str("X: ");
+    for i in 0..5 {
+        let x_value = x_min + (i as f64 / 4.0) * (x_max - x_min);
+        if i == 0 {
+            output.push_str("  ");
+        } else {
+            output.push_str("              ");
+        }
+        output.push_str(&format!("{:.1}", x_value));
+    }
+    output.push('\n');
 
     output
 }

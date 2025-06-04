@@ -5,12 +5,10 @@ pub trait Pow<T> {
     fn pow(self, rhs: T) -> Self::Output;
 }
 
-
-pub enum EvaluationError{
-    GenericWithString(Localization,Localization,String)
+#[derive(Debug)]
+pub enum EvaluationError {
+    GenericWithString(Localization, Localization, String),
 }
-pub trait Eval<Tree,Context,Output>{
-    fn eval(tree:&Tree,context:&Context) -> Result<Output,EvaluationError>;
+pub trait Eval<Tree, Context, Output> {
+    fn eval(tree: &Tree, context: &Context) -> Result<Output, EvaluationError>;
 }
-
-

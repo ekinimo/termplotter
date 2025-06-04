@@ -4,7 +4,7 @@ use std::{
     usize,
 };
 
-use crate::{ parser_common::{Node, Localization}};
+use crate::parser_common::{Localization, Node};
 
 pub trait VariableSuperTrait: Display + Clone + PartialEq + Debug + HasSameShape {}
 pub trait HasSameShape {
@@ -36,7 +36,6 @@ pub struct ENeg;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EExpression;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExpressionSyntaxTree<T: VariableSuperTrait> {
     Variable(Node<EVar, T>),
@@ -51,9 +50,6 @@ pub enum ExpressionSyntaxTree<T: VariableSuperTrait> {
     Division(Box<Node<EDiv, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>),
     Negation(Box<Node<ENeg, ExpressionSyntaxTree<T>>>),
 }
-
-
-
 
 impl<T: VariableSuperTrait> ExpressionSyntaxTree<T> {
     pub fn number(starts: Localization, ends: Localization, num: f64) -> Self {
@@ -92,7 +88,6 @@ impl<T: VariableSuperTrait> ExpressionSyntaxTree<T> {
         ExpressionSyntaxTree::Fun(Node::new(starts, ends, (name, vec)))
     }
 }
-
 
 impl<T: Debug + Clone + Display + PartialEq + HasSameShape> VariableSuperTrait for T {}
 
@@ -221,36 +216,54 @@ impl<T: VariableSuperTrait> Display for ExpressionSyntaxTree<T> {
                 location: _,
                 phantom: _,
             }) => write!(f, "{value}"),
-            ExpressionSyntaxTree::Sum(box Node {
-                value: (left, right),
-                location: _,
-                phantom: _,
-            }) => write!(f, "({left} + {right})"),
-            ExpressionSyntaxTree::Product(box Node {
-                value: (left, right),
-                location: _,
-                phantom: _,
-            }) => write!(f, "({left} * {right})"),
-            ExpressionSyntaxTree::Exponent(box Node {
-                value: (left, right),
-                location: _,
-                phantom: _,
-            }) => write!(f, "({left} ^ {right})"),
-            ExpressionSyntaxTree::Subtraction(box Node {
-                value: (left, right),
-                location: _,
-                phantom: _,
-            }) => write!(f, "({left} - {right})"),
-            ExpressionSyntaxTree::Division(box Node {
-                value: (left, right),
-                location: _,
-                phantom: _,
-            }) => write!(f, "({left} / {right})"),
-            ExpressionSyntaxTree::Negation(box Node {
-                value,
-                location: _,
-                phantom: _,
-            }) => write!(f, "-{value}"),
+            ExpressionSyntaxTree::Sum(b) => {
+                let Node {
+                    value: (left, right),
+                    location: _,
+                    phantom: _,
+                } = &**b;
+                write!(f, "({left} + {right})")
+            }
+            ExpressionSyntaxTree::Product(b) => {
+                let Node {
+                    value: (left, right),
+                    location: _,
+                    phantom: _,
+                } = &**b;
+                write!(f, "({left} * {right})")
+            }
+            ExpressionSyntaxTree::Exponent(b) => {
+                let Node {
+                    value: (left, right),
+                    location: _,
+                    phantom: _,
+                } = &**b;
+                write!(f, "({left} ^ {right})")
+            }
+            ExpressionSyntaxTree::Subtraction(b) => {
+                let Node {
+                    value: (left, right),
+                    location: _,
+                    phantom: _,
+                } = &**b;
+                write!(f, "({left} - {right})")
+            }
+            ExpressionSyntaxTree::Division(b) => {
+                let Node {
+                    value: (left, right),
+                    location: _,
+                    phantom: _,
+                } = &**b;
+                write!(f, "({left} / {right})")
+            }
+            ExpressionSyntaxTree::Negation(b) => {
+                let Node {
+                    value,
+                    location: _,
+                    phantom: _,
+                } = &**b;
+                write!(f, "-{value}")
+            }
         }
     }
 }

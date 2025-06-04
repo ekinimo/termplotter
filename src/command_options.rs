@@ -1,6 +1,9 @@
-use std::{marker::PhantomData, collections::HashSet};
+use std::{collections::HashSet, marker::PhantomData};
 
-use crate::{parser_common::{Node, Localization}, expression::HasSameShape};
+use crate::{
+    expression::HasSameShape,
+    parser_common::{Localization, Node},
+};
 use std::hash::Hash;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -38,9 +41,9 @@ impl DisplayOption {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct EOutputPNG;
+pub struct EOutputPPM;
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct EOutputJPG;
+pub struct EOutputSVG;
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct EOutputLaTeX;
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -83,7 +86,7 @@ impl<T> HasSameShape for Geometry<T> {
     }
 }
 
-impl Default for Geometry<EOutputPNG> {
+impl Default for Geometry<EOutputPPM> {
     fn default() -> Self {
         Self {
             width: 800,
@@ -93,7 +96,7 @@ impl Default for Geometry<EOutputPNG> {
     }
 }
 
-impl Default for Geometry<EOutputJPG> {
+impl Default for Geometry<EOutputSVG> {
     fn default() -> Self {
         Self {
             width: 800,
@@ -135,8 +138,8 @@ impl Default for Geometry<EOutputRegis> {
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum OutputOptions {
-    PNG(Node<EOutputPNG, (String, Geometry<EOutputPNG>)>),
-    JPG(Node<EOutputJPG, (String, Geometry<EOutputJPG>)>),
+    PPM(Node<EOutputPPM, (String, Geometry<EOutputPPM>)>),
+    SVG(Node<EOutputSVG, (String, Geometry<EOutputSVG>)>),
     LaTeX(Node<EOutputLaTeX, (String, Geometry<EOutputLaTeX>)>),
     Sixel(Node<EOutputSixel, (String, Geometry<EOutputSixel>)>),
     Regis(Node<EOutputRegis, (String, Geometry<EOutputRegis>)>),
@@ -144,29 +147,29 @@ pub enum OutputOptions {
 }
 
 impl OutputOptions {
-    pub fn png(start: Localization, end: Localization, var: String) -> Self {
-        Self::PNG(Node::new(start, end, (var, Geometry::default())))
+    pub fn ppm(start: Localization, end: Localization, var: String) -> Self {
+        Self::PPM(Node::new(start, end, (var, Geometry::default())))
     }
-    pub fn png_geom(
+    pub fn ppm_geom(
         start: Localization,
         end: Localization,
         var: String,
         width: usize,
         height: usize,
     ) -> Self {
-        Self::PNG(Node::new(start, end, (var, Geometry::new(width, height))))
+        Self::PPM(Node::new(start, end, (var, Geometry::new(width, height))))
     }
-    pub fn jpg(start: Localization, end: Localization, var: String) -> Self {
-        Self::JPG(Node::new(start, end, (var, Geometry::default())))
+    pub fn svg(start: Localization, end: Localization, var: String) -> Self {
+        Self::SVG(Node::new(start, end, (var, Geometry::default())))
     }
-    pub fn jpg_geom(
+    pub fn svg_geom(
         start: Localization,
         end: Localization,
         var: String,
         width: usize,
         height: usize,
     ) -> Self {
-        Self::JPG(Node::new(start, end, (var, Geometry::new(width, height))))
+        Self::SVG(Node::new(start, end, (var, Geometry::new(width, height))))
     }
 
     pub fn latex(start: Localization, end: Localization, var: String) -> Self {
@@ -230,9 +233,14 @@ impl CommandOptions {
     }
 }
 
-
-impl Default for CommandOptions{
+impl Default for CommandOptions {
     fn default() -> Self {
-        Self { display: HashSet::from([DisplayOption::regis(Localization::default(), Localization::default())]), output: Default::default() }
+        Self {
+            display: HashSet::from([DisplayOption::regis(
+                Localization::default(),
+                Localization::default(),
+            )]),
+            output: Default::default(),
+        }
     }
 }

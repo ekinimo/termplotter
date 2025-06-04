@@ -8,10 +8,10 @@ use parser_combinator::*;
 use std::str::Chars;
 
 use crate::expression::*;
-use crate::parser_common::{*};
+use crate::parser_common::*;
 
-
-pub type ExprParseResult<'a> = Result<(ExpressionSyntaxTree<String>, State, Chars<'a>), ParseErrors>;
+pub type ExprParseResult<'a> =
+    Result<(ExpressionSyntaxTree<String>, State, Chars<'a>), ParseErrors>;
 
 /*
 macro_rules! ASTBuilder {
@@ -44,8 +44,6 @@ ASTBuilder!(A => Self.right_assoc(EMulOrDiv, token_combiner!(Plus | Minus) ) ;
     Either::Left(a) | Either::Right(Either::Right(a)) | Either::Right(Either::Left(a)) => a,
 }  );
 */
-
-
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ESumOrSub;
@@ -233,8 +231,6 @@ impl<'a> Parse<'a, Chars<'a>, State, ExpressionSyntaxTree<String>, ParseErrors> 
     }
 }
 
-
-
 impl<'a> Parse<'a, Chars<'a>, State, ExpressionSyntaxTree<String>, ParseErrors> for EFun {
     fn parse(&self, input: Chars<'a>, state: State) -> ExprParseResult<'a> {
         let tuple = Triple::new(
@@ -281,6 +277,3 @@ impl<'a> Parse<'a, Chars<'a>, State, ExpressionSyntaxTree<String>, ParseErrors> 
             .parse(input, state)
     }
 }
-
-
-

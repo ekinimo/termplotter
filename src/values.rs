@@ -4,91 +4,156 @@ use std::io::{self, BufRead};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::path::Path;
 
-
 use crate::eval::{EvaluationError, Pow};
 use crate::expression::{HasSameShape, VariableSuperTrait};
 use crate::parser_common::Localization;
 
-
-pub trait PrimitiveUnary{
-    
+pub trait PrimitiveUnary<T> {
+    fn apply(&self, arg: T) -> Result<T, String>;
 }
 
-pub trait PrimitiveBinary{}
-
-pub trait PrimitiveTernary{}
-
-impl <T: Fn(f64) -> f64 > PrimitiveUnary for T {
-    
+pub trait PrimitiveBinary<T> {
+    fn apply(&self, arg1: T, arg2: T) -> Result<T, String>;
 }
 
-
-
-impl <T: Fn(f64,f64) -> f64 > PrimitiveBinary for T {
-    
+pub trait PrimitiveTernary<T> {
+    fn apply(&self, arg1: T, arg2: T, arg3: T) -> Result<T, String>;
 }
 
-
-impl <T: Fn(f64,f64,f64) -> f64 > PrimitiveTernary for T {
-    
+pub struct UnaryFunction<F: Fn(f64) -> f64> {
+    func: F,
 }
 
-
-
-
-pub fn make_primitive_unary<'a,F:Fn(f64) -> f64 + 'a>( f:&'a F) -> &'a dyn PrimitiveUnary{
-    return f;
+pub struct BinaryFunction<F: Fn(f64, f64) -> f64> {
+    func: F,
 }
- //TODO make Values Iterable so you can generalize this concept
-pub fn make_primitive_unary_unary<'a,T:Fn(f64)->f64  >( f:&'a T) -> impl Fn(ExpressionRange1dResult) -> ExpressionRange1dResult + 'a {
-     | x | {
-         x.0.into_iter().map(
-         |a| f(a)).collect::<Vec<f64>>().into()
+
+pub struct TernaryFunction<F: Fn(f64, f64, f64) -> f64> {
+    func: F,
+}
+
+impl<F: Fn(f64) -> f64> UnaryFunction<F> {
+    pub fn new(func: F) -> Self {
+        Self { func }
     }
 }
 
-
-
-
-pub fn make_primitive_binary<'a,F>( f:&'a F) -> &'a dyn PrimitiveBinary where F: Fn(f64,f64) -> f64 + 'a {
-    return f;
-}
-
-pub fn make_primitive_binary_binary<'a,T:Fn(f64,f64)->f64  >( f:&'a T) -> impl Fn(ExpressionRange1dResult,ExpressionRange1dResult) -> ExpressionRange1dResult + 'a {
-    | x,y | {
-        x.0.into_iter().zip(y.0.into_iter()).map(
-            |(a,b)| f(a,b)).collect::<Vec<f64>>().into()
+impl<F: Fn(f64, f64) -> f64> BinaryFunction<F> {
+    pub fn new(func: F) -> Self {
+        Self { func }
     }
 }
 
-
-pub fn make_primitive_ternary<'a,F>( f:&'a F) -> &'a dyn PrimitiveTernary where F: Fn(f64,f64,f64) -> f64 + 'a {
-    return f;
-}
-
-pub fn make_primitive_ternary_ternary<'a,T:Fn(f64,f64,f64)->f64  >( f:&'a T) -> impl Fn(ExpressionRange1dResult,ExpressionRange1dResult,ExpressionRange1dResult) -> ExpressionRange1dResult + 'a {
-    | x,y,z | {
-        x.0.into_iter().zip(y.0.into_iter()).zip(z.0.into_iter()).map(
-            |((a,b),c)| f(a,b,c)).collect::<Vec<f64>>().into()
+impl<F: Fn(f64, f64, f64) -> f64> TernaryFunction<F> {
+    pub fn new(func: F) -> Self {
+        Self { func }
     }
 }
 
-
-
-pub trait Value<T> : Add + Mul + Neg + Div + Sub + Pow<T> + From<f64> {}
-
-impl <T,A : Add + Mul + Neg + Div + Sub + Pow<T> + From<f64>> Value<T> for A {
-    
+impl<F: Fn(f64) -> f64> PrimitiveUnary<ExpressionRange1dResult> for UnaryFunction<F> {
+    fn apply(&self, arg: ExpressionRange1dResult) -> Result<ExpressionRange1dResult, String> {
+        let result = arg.0.into_iter().map(&self.func).collect::<Vec<f64>>();
+        Ok(ExpressionRange1dResult::from(result))
+    }
 }
 
+impl<F: Fn(f64, f64) -> f64> PrimitiveBinary<ExpressionRange1dResult> for BinaryFunction<F> {
+    fn apply(
+        &self,
+        arg1: ExpressionRange1dResult,
+        arg2: ExpressionRange1dResult,
+    ) -> Result<ExpressionRange1dResult, String> {
+        let result = match (arg1.0.len(), arg2.0.len()) {
+            (1, _) => arg2
+                .0
+                .into_iter()
+                .map(|val| (self.func)(arg1.0[0], val))
+                .collect::<Vec<f64>>(),
+            (_, 1) => arg1
+                .0
+                .into_iter()
+                .map(|val| (self.func)(val, arg2.0[0]))
+                .collect::<Vec<f64>>(),
+            (a, b) if a == b => arg1
+                .0
+                .into_iter()
+                .zip(arg2.0.into_iter())
+                .map(|(a, b)| (self.func)(a, b))
+                .collect::<Vec<f64>>(),
+            _ => return Err("Mismatched array lengths in binary function".into()),
+        };
+        Ok(ExpressionRange1dResult::from(result))
+    }
+}
+
+impl<F: Fn(f64, f64, f64) -> f64> PrimitiveTernary<ExpressionRange1dResult> for TernaryFunction<F> {
+    fn apply(
+        &self,
+        arg1: ExpressionRange1dResult,
+        arg2: ExpressionRange1dResult,
+        arg3: ExpressionRange1dResult,
+    ) -> Result<ExpressionRange1dResult, String> {
+        let result = match (arg1.0.len(), arg2.0.len(), arg3.0.len()) {
+            (_, 1, 1) => arg1
+                .0
+                .into_iter()
+                .map(|val| (self.func)(val, arg2.0[0], arg3.0[0]))
+                .collect::<Vec<f64>>(),
+            (1, _, 1) => arg2
+                .0
+                .into_iter()
+                .map(|val| (self.func)(arg1.0[0], val, arg3.0[0]))
+                .collect::<Vec<f64>>(),
+            (1, 1, _) => arg3
+                .0
+                .into_iter()
+                .map(|val| (self.func)(arg1.0[0], arg2.0[0], val))
+                .collect::<Vec<f64>>(),
+            (a, b, c) if a == b && b == c => arg1
+                .0
+                .into_iter()
+                .zip(arg2.0.into_iter())
+                .zip(arg3.0.into_iter())
+                .map(|((val, min), max)| (self.func)(val, min, max))
+                .collect::<Vec<f64>>(),
+            _ => return Err("Mismatched array lengths in ternary function".into()),
+        };
+        Ok(ExpressionRange1dResult::from(result))
+    }
+}
+
+pub fn make_primitive_unary<T, F: Fn(f64) -> f64 + 'static>(f: F) -> Box<dyn PrimitiveUnary<T> + 'static>
+where UnaryFunction<F>: PrimitiveUnary<T>
+{
+    Box::new(UnaryFunction::new(f))
+}
+
+pub fn make_primitive_binary<T, F: Fn(f64, f64) -> f64 + 'static>(
+    f: F,
+) -> Box<dyn PrimitiveBinary<T> + 'static>
+    where BinaryFunction<F>: PrimitiveBinary<T>
+
+{
+    Box::new(BinaryFunction::new(f))
+}
+
+pub fn make_primitive_ternary<T, F: Fn(f64, f64, f64) -> f64 + 'static>(
+    f: F,
+) -> Box<dyn PrimitiveTernary<T>+ 'static> where TernaryFunction<F>: PrimitiveTernary<T> {
+    Box::new(TernaryFunction::new(f))
+}
+
+pub trait Value<T>: Add + Mul + Neg + Div + Sub + Pow<T> + From<f64> {}
+
+impl<T, A: Add + Mul + Neg + Div + Sub + Pow<T> + From<f64>> Value<T> for A {}
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExpressionRange1dResult(/*TODO Box<[f64]>*/ Vec<f64>);
+pub struct ExpressionRange1dResult(/*TODO Box<[f64]>*/ pub Vec<f64>);
 
 impl Display for ExpressionRange1dResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Ok(self.0.iter().for_each(|x| {
-            write!(f, "{x} ");
+            _ = write!(f, "{x} ");
         }))
     }
 }
@@ -109,20 +174,23 @@ impl ExpressionRange1dResult {
         }
         let start = (s * g) as i64;
         let end = (e * g) as i64;
-        let ret = (start..end)
+        let ret = (start..=end)
             .step_by(delta as usize)
             .map(|x| (x as f64) / g)
             .collect();
         Ok(Self(ret))
     }
 
-    pub fn create_from_file(path: String) -> Result<Self, impl FnOnce(Localization,Localization) -> EvaluationError> {
-        let er = Err( |a , b| EvaluationError::GenericWithString(a, b, "Couldnt Read Line".to_string()));
+    pub fn create_from_file(
+        path: String,
+    ) -> Result<Self, impl FnOnce(Localization, Localization) -> EvaluationError> {
+        let er =
+            Err(|a, b| EvaluationError::GenericWithString(a, b, "Couldnt Read Line".to_string()));
         if let Ok(lines) = read_lines(path) {
             let mut rey = vec![];
             for line in lines {
                 if let Ok(ip) = line {
-                    let ret : Vec<f64> = ip
+                    let ret: Vec<f64> = ip
                         .split_ascii_whitespace()
                         .into_iter()
                         .map(str::parse::<f64>)
@@ -136,18 +204,24 @@ impl ExpressionRange1dResult {
             }
             return Ok(Self(rey));
         } else {
-           return  er;
+            return er;
         }
     }
 
-    pub fn create_from_file_col(path: String, col:usize) -> Result<Self, impl FnOnce(Localization,Localization) -> EvaluationError>  {
-        let er = Err( |a , b| EvaluationError::GenericWithString(a, b, "Couldnt Read Line".to_string()));
+    pub fn create_from_file_col(
+        path: String,
+        col: usize,
+    ) -> Result<Self, impl FnOnce(Localization, Localization) -> EvaluationError> {
+        let er =
+            Err(|a, b| EvaluationError::GenericWithString(a, b, "Couldnt Read Line".to_string()));
         if let Ok(lines) = read_lines(path) {
             let mut rey = vec![];
             for line in lines {
                 if let Ok(ip) = line {
-                    let ret  : Vec<f64>= ip
-                        .split_ascii_whitespace().filter_map(|x| x.parse::<f64>().ok()).collect();
+                    let ret: Vec<f64> = ip
+                        .split_ascii_whitespace()
+                        .filter_map(|x| x.parse::<f64>().ok())
+                        .collect();
                     rey.push(*ret.get(col).unwrap());
                 } else {
                     return er;
@@ -159,12 +233,11 @@ impl ExpressionRange1dResult {
         }
     }
 
-
-    fn max(&self) -> f64 {
+    pub fn max(&self) -> f64 {
         self.clone().0.into_iter().reduce(f64::max).unwrap()
     }
 
-    fn min(&self) -> f64 {
+    pub fn min(&self) -> f64 {
         self.clone().0.into_iter().reduce(f64::min).unwrap()
     }
 }

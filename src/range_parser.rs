@@ -2,8 +2,13 @@ use std::str::Chars;
 
 use parser_combinator::Parse;
 
-use crate::{range::{Range, ERangeNumeric, ERangeNumericStep, ERangeFile, ERange, ERangeFileCol}, parser_common::{State, ParseErrors, In, LowerCaseName, DoubleToken, For, Colon, identity, IntegerToken, AsciiAnythingUpToSpace}};
-
+use crate::{
+    parser_common::{
+        identity, AsciiAnythingUpToSpace, Colon, DoubleToken, For, In, IntegerToken, LowerCaseName,
+        ParseErrors, State,
+    },
+    range::{ERange, ERangeFile, ERangeFileCol, ERangeNumeric, ERangeNumericStep, Range},
+};
 
 type RangeParseResult<'a> = Result<(Range, State, Chars<'a>), ParseErrors>;
 
@@ -84,7 +89,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERangeFileCol {
 
 impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERange {
     fn parse(&self, input: Chars<'a>, state: State) -> RangeParseResult<'a> {
-        ERangeNumeric
+        ERangeNumericStep
             .or_else(ERangeNumeric)
             .or_else(ERangeFileCol)
             .or_else(ERangeFile)

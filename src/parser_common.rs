@@ -6,7 +6,7 @@ use parser_combinator::parser::{match_anything, match_literal, Parser};
 use parser_combinator::triple::Triple;
 use parser_combinator::*;
 
-use std::{marker::PhantomData, fmt::Display, str::Chars};
+use std::{fmt::Display, marker::PhantomData, str::Chars};
 
 use parser_combinator::Parse;
 
@@ -28,7 +28,6 @@ where
     pub phantom: PhantomData<Dummy>,
 }
 
-
 impl<Dummy, T: HasSameShape> Node<Dummy, T> {
     pub fn new(starts: Localization, ends: Localization, tree: T) -> Self {
         Self {
@@ -38,15 +37,15 @@ impl<Dummy, T: HasSameShape> Node<Dummy, T> {
         }
     }
     /* fn starts_at(&mut self, pos: Localization) {
-    self.location.0 = pos
-}
-    fn ends_at(&mut self, pos: Localization) {
-    self.location.1 = pos
-}
+        self.location.0 = pos
+    }
+        fn ends_at(&mut self, pos: Localization) {
+        self.location.1 = pos
+    }
 
-    fn at(&mut self, start: Localization, end: Localization) {
-    self.location = (start, end)
-}*/
+        fn at(&mut self, start: Localization, end: Localization) {
+        self.location = (start, end)
+    }*/
 }
 
 impl Localization {
@@ -64,11 +63,6 @@ impl<Dummy, T: HasSameShape> HasSameShape for Node<Dummy, T> {
         self.value.has_same_shape(&other.value)
     }
 }
-
-
-
-
-
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -161,8 +155,8 @@ token_implementer!(AsciiToken, "display=ascii");
 token_implementer!(AnciToken, "display=ansi");
 
 //Output tokens
-token_implementer!(PngToken, "png=");
-token_implementer!(JpgToken, "jpg=");
+token_implementer!(PpmToken, "ppm=");
+token_implementer!(SvgToken, "svg=");
 token_implementer!(LatexToken, "latex=");
 token_implementer!(SixelDToken, "sixel=");
 token_implementer!(RegisDToken, "regis=");
@@ -227,7 +221,20 @@ impl<'a> Parse<'a, Chars<'a>, State, String, String> for IntegerToken {
             .one_or_more()
             .with_error(|_, i: Chars<'a>| format!("integer parsing failed got {}", i.as_str()))
             .transform(to_string);
-        int_parser.parse(input, state)
+        let maybe_minus = match_anything(State::transit_generator(1, 0))
+            .validate(
+                |character: &char| *character == '-',
+                "numeric character".to_string(),
+            )
+            .pair(int_parser.clone())
+            .with_error(|_, i: Chars<'a>| format!("integer parsing failed got {}", i.as_str()))
+            .transform(|(a, b)| format!("{a}{b}"));
+
+        let p = maybe_minus
+            .or_else(int_parser)
+            .with_error(|_, i: Chars<'a>| format!("integer parsing failed got {}", i.as_str()));
+
+        p.parse(input, state)
     }
 }
 

@@ -1,8 +1,14 @@
-use std::{str::Chars, collections::HashSet};
+use std::{collections::HashSet, str::Chars};
 
-use parser_combinator::{Parse, either::Either};
+use parser_combinator::{either::Either, Parse};
 
-use crate::{command_options::*, parser_common::{State, ParseErrors, GeometryToken, IntegerToken, Comma, AsciiAnythingUpToSpace, With, SixelToken, AsciiToken, AnciToken, RegisToken}};
+use crate::{
+    command_options::*,
+    parser_common::{
+        AnciToken, AsciiAnythingUpToSpace, AsciiToken, Comma, GeometryToken, IntegerToken,
+        ParseErrors, RegisToken, SixelToken, State, With,
+    },
+};
 
 pub type DisplayParseResult<'a> = Result<(DisplayOption, State, Chars<'a>), ParseErrors>;
 
@@ -54,21 +60,24 @@ impl<'a> Parse<'a, Chars<'a>, State, DisplayOption, ParseErrors> for EDisplay {
 }
 
 pub type OutputParseResult<'a> = Result<(OutputOptions, State, Chars<'a>), ParseErrors>;
-impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputPNG {
+
+use crate::parser_common::{CsvToken, LatexToken, PpmToken, RegisDToken, SixelDToken, SvgToken};
+
+impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputPPM {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputPNG
+        PpmToken
             .pair(AsciiAnythingUpToSpace)
-            .transform_with_state(|(_, var), s| OutputOptions::png(s.start, s.end, var))
+            .transform_with_state(|(_, var), s| OutputOptions::ppm(s.start, s.end, var))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .parse(input, state)
     }
 }
 
-impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputJPG {
+impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputSVG {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputJPG
+        SvgToken
             .pair(AsciiAnythingUpToSpace)
-            .transform_with_state(|(_, var), s| OutputOptions::jpg(s.start, s.end, var))
+            .transform_with_state(|(_, var), s| OutputOptions::svg(s.start, s.end, var))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .parse(input, state)
     }
@@ -76,7 +85,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputJPG 
 
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputLaTeX {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputLaTeX
+        LatexToken
             .pair(AsciiAnythingUpToSpace)
             .transform_with_state(|(_, var), s| OutputOptions::latex(s.start, s.end, var))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -86,11 +95,8 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputLaTe
 
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputSixel {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputSixel
+        SixelDToken
             .pair(AsciiAnythingUpToSpace)
-            //.or_else(EOutputSixel
-            //         .pair(AsciiAnythingUpToSpace)
-            //)
             .transform_with_state(|(_, var), s| OutputOptions::sixel(s.start, s.end, var))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .parse(input, state)
@@ -99,7 +105,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputSixe
 
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputRegis {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputRegis
+        RegisDToken
             .pair(AsciiAnythingUpToSpace)
             .transform_with_state(|(_, var), s| OutputOptions::regis(s.start, s.end, var))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -109,7 +115,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputRegi
 
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputCSV {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputCSV
+        CsvToken
             .pair(AsciiAnythingUpToSpace)
             .transform_with_state(|(_, var), s| OutputOptions::csv(s.start, s.end, var))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -120,7 +126,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputCSV 
 struct EOutputPNGwithGeometry;
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputPNGwithGeometry {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputPNG
+        PpmToken
             .pair(AsciiAnythingUpToSpace)
             .second()
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -134,7 +140,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputPNGw
                     .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end)),
             )
             .transform_with_state(|(var, _, (a, b)), s| {
-                OutputOptions::png_geom(s.start, s.end, var, a, b)
+                OutputOptions::ppm_geom(s.start, s.end, var, a, b)
             })
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .parse(input, state)
@@ -144,7 +150,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputPNGw
 struct EOutputJPGwithGeometry;
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputJPGwithGeometry {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputJPG
+        SvgToken
             .pair(AsciiAnythingUpToSpace)
             .second()
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -158,7 +164,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputJPGw
                     .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end)),
             )
             .transform_with_state(|(var, _, (a, b)), s| {
-                OutputOptions::jpg_geom(s.start, s.end, var, a, b)
+                OutputOptions::svg_geom(s.start, s.end, var, a, b)
             })
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .parse(input, state)
@@ -168,7 +174,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputJPGw
 struct EOutputLatexWithGeometry;
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputLatexWithGeometry {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputJPG
+        LatexToken
             .pair(AsciiAnythingUpToSpace)
             .second()
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -192,7 +198,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputLate
 struct EOutputSixelWithGeometry;
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputSixelWithGeometry {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputJPG
+        SixelDToken
             .pair(AsciiAnythingUpToSpace)
             .second()
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -216,7 +222,7 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputSixe
 struct EOutputRegisWithGeometry;
 impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutputRegisWithGeometry {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
-        EOutputJPG
+        RegisDToken
             .pair(AsciiAnythingUpToSpace)
             .second()
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -241,8 +247,8 @@ impl<'a> Parse<'a, Chars<'a>, State, OutputOptions, ParseErrors> for EOutput {
     fn parse(&self, input: Chars<'a>, state: State) -> OutputParseResult<'a> {
         EOutputCSV
             .or_else(EOutputLatexWithGeometry.or_else(EOutputLaTeX))
-            .or_else(EOutputJPGwithGeometry.or_else(EOutputJPG))
-            .or_else(EOutputPNGwithGeometry.or_else(EOutputPNG))
+            .or_else(EOutputJPGwithGeometry.or_else(EOutputSVG))
+            .or_else(EOutputPNGwithGeometry.or_else(EOutputPPM))
             .or_else(EOutputRegisWithGeometry.or_else(EOutputRegis))
             .or_else(EOutputSixelWithGeometry.or_else(EOutputSixel))
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
@@ -257,16 +263,20 @@ impl<'a> Parse<'a, Chars<'a>, State, CommandOptions, ParseErrors> for ECommandOp
         With.pair(EOutput.either(EDisplay).zero_or_more())
             .second()
             .transform(|x| {
-                let mut map1 = HashSet::new();
-                let mut map2 = HashSet::new();
+                let mut output_map = HashSet::new();
+                let mut display_map = HashSet::new();
                 for i in x.into_iter() {
                     match i {
-                        Either::Left(output) => map1.insert(output),
-                        Either::Right(display) => map2.insert(display),
+                        Either::Left(output) => {
+                            output_map.insert(output);
+                        }
+                        Either::Right(display) => {
+                            display_map.insert(display);
+                        }
                     };
                 }
 
-                CommandOptions::new(map1, map2)
+                CommandOptions::new(output_map, display_map)
             })
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .parse(input, state)

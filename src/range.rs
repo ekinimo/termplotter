@@ -1,4 +1,4 @@
-use crate::parser_common::{Node, Localization};
+use crate::parser_common::{Localization, Node};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ERangeNumeric;

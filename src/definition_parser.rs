@@ -1,8 +1,12 @@
-use std::{str::Chars, collections::HashMap};
+use std::{collections::HashMap, str::Chars};
 
-use parser_combinator::{Parse, either::Either};
+use parser_combinator::{either::Either, Parse};
 
-use crate::{definition::{*}, parser_common::{*}, expression::{EExpression, ExpressionSyntaxTree}};
+use crate::{
+    definition::*,
+    expression::{EExpression, ExpressionSyntaxTree},
+    parser_common::*,
+};
 
 pub type DefinitionParseResult<'a> = Result<(Definition<String>, State, Chars<'a>), ParseErrors>;
 
@@ -17,9 +21,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Definition<String>, ParseErrors> for EDefin
         let fname = LowerCaseName
             .pair(
                 LParen
-                    .triple(LowerCaseName.separated_by(Comma), RParen
-                        
-                    )
+                    .triple(LowerCaseName.separated_by(Comma), RParen)
                     .second()
                     .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end)),
             )

@@ -530,6 +530,7 @@ where
             } else if let Some(var_expr) = context.get_variable(&x.value) {
                 eval_with_param_substitution(&var_expr, param_env, context)
             } else {
+dbg!("Here");
                 None
             }
         }
@@ -559,9 +560,11 @@ where
                             }
                             eval_with_param_substitution(&function_expr, &nested_param_env, context)
                         } else {
+dbg!("Here");
                             None
                         }
                     } else {
+dbg!("Here");
                         None
                     }
                 }
@@ -579,9 +582,11 @@ where
                             }
                             eval_with_param_substitution(&function_expr, &nested_param_env, context)
                         } else {
+dbg!("Here");
                             None
                         }
                     } else {
+dbg!("Here");
                         None
                     }
                 }
@@ -621,9 +626,11 @@ where
                             }
                             eval_with_param_substitution(&function_expr, &nested_param_env, context)
                         } else {
+dbg!("Here");
                             None
                         }
                     } else {
+dbg!("Here");
                         None
                     }
                 }
@@ -712,6 +719,8 @@ where
     }
 }
 
+
+//TODO make itgeneric over ExpressionRange1dResult, so we can use it ExpressionRange2d
 pub fn eval_with_hashmap<T: VariableSuperTrait + Hash + Eq + AsRef<str>, ContextV: Context<T>>(
     e: &ExpressionSyntaxTree<T>,
     env: &HashMap<T, ExpressionRange1dResult>,

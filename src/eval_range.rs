@@ -1,7 +1,7 @@
 use crate::{
     eval::{Eval, EvaluationError},
     range::Range,
-    values::ExpressionRange1dResult,
+    values::{ExpressionRange1dResult, ExpressionRange2d},
 };
 use std::marker::PhantomData;
 
@@ -33,5 +33,36 @@ impl<Context> Eval<Range, Context, ExpressionRange1dResult>
                     .map_err(|a| a(x.location.0, x.location.1))
             }
         }
+    }
+}
+
+// Structure to hold 2D range data for 3D surface evaluation
+pub struct Range2D {
+    pub x_range: Range,
+    pub y_range: Range,
+}
+
+impl Range2D {
+    pub fn new(x_range: Range, y_range: Range) -> Self {
+        Self { x_range, y_range }
+    }
+}
+
+impl<Context> Eval<Range2D, Context, ExpressionRange2d> for DummyRange<ExpressionRange2d> {
+    fn eval(tree: &Range2D, context: &Context) -> Result<ExpressionRange2d, EvaluationError> {
+        let x_result = DummyRange::<ExpressionRange1dResult>::eval(&tree.x_range, context)?;
+        let y_result = DummyRange::<ExpressionRange1dResult>::eval(&tree.y_range, context)?;
+        
+        // Create a flattened 2D range: [x1,x2,...,xn, y1,y2,...,ym, x1,x2,...,xn, y1,y2,...,ym, ...]
+        // This represents a meshgrid where each (x,y) pair can be evaluated
+        let mut data = Vec::new();
+        for &y_val in &y_result.0 {
+            for &x_val in &x_result.0 {
+                data.push(x_val);
+                data.push(y_val);
+            }
+        }
+        
+        Ok(ExpressionRange2d(data, x_result.0.len(), y_result.0.len()))
     }
 }

@@ -9,14 +9,143 @@ use crate::{
     expression::EExpression,
     expression_parser::*,
     parametric2d::EParametric2D,
-    parser_common::{identity, ParseErrors, State},
-    range::ERange,
+    parser_common::{identity, ParseErrors, State, For, In, LowerCaseName, Colon, DoubleToken},
+    range::{ERange, Range},
 };
 
 pub type CommandParseResult<'a> = Result<(Command, State, Chars<'a>), ParseErrors>;
 
 impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
     fn parse(&self, input: Chars<'a>, state: State) -> CommandParseResult<'a> {
+        // First try parsing 3D surface with inline syntax: "expr for x in 1:10 for y in 1:10" or "expr for x in 1:10:100 for y in 1:10:100"
+        let surface3d_inline = EExpression
+            .pair(
+                For.triple(LowerCaseName, In)
+                    .second()
+                    .pair(
+                        // Try stepped range first: start:end:step
+                        DoubleToken
+                            .triple(Colon, DoubleToken)
+                            .triple(Colon, DoubleToken)
+                            .transform(|((s, _, e), _, st)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), Some(st.parse::<f64>().unwrap())))
+                            .either(
+                                // Fall back to simple range: start:end
+                                DoubleToken
+                                    .triple(Colon, DoubleToken)
+                                    .transform(|(s, _, e)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), None))
+                            )
+                            .fold(identity, identity)
+                    )
+            )
+            .pair(
+                For.triple(LowerCaseName, In)
+                    .second()
+                    .pair(
+                        // Try stepped range first: start:end:step
+                        DoubleToken
+                            .triple(Colon, DoubleToken)
+                            .triple(Colon, DoubleToken)
+                            .transform(|((s, _, e), _, st)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), Some(st.parse::<f64>().unwrap())))
+                            .either(
+                                // Fall back to simple range: start:end
+                                DoubleToken
+                                    .triple(Colon, DoubleToken)
+                                    .transform(|(s, _, e)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), None))
+                            )
+                            .fold(identity, identity)
+                    )
+            )
+            .pair(ECommandOption)
+            .transform_with_state(|(((expr, (x_var, (x_start, x_end, x_step))), (y_var, (y_start, y_end, y_step))), options), st| {
+                let x_range = match x_step {
+                    Some(step) => Range::numeric_step(st.start, st.end, x_var.clone(), x_start, x_end, step),
+                    None => Range::numeric(st.start, st.end, x_var.clone(), x_start, x_end),
+                };
+                let y_range = match y_step {
+                    Some(step) => Range::numeric_step(st.start, st.end, y_var.clone(), y_start, y_end, step),
+                    None => Range::numeric(st.start, st.end, y_var.clone(), y_start, y_end),
+                };
+                Command::new_surface3d(
+                    crate::definition::Definition::new(
+                        std::collections::HashMap::new(),
+                        std::collections::HashMap::new(),
+                    ),
+                    expr,
+                    x_var,
+                    y_var,
+                    x_range,
+                    y_range,
+                    options,
+                )
+            });
+            
+        // Also try 3D surface without command options (use defaults)
+        let simple_surface3d_inline = EExpression
+            .pair(
+                For.triple(LowerCaseName, In)
+                    .second()
+                    .pair(
+                        // Try stepped range first: start:end:step
+                        DoubleToken
+                            .triple(Colon, DoubleToken)
+                            .triple(Colon, DoubleToken)
+                            .transform(|((s, _, e), _, st)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), Some(st.parse::<f64>().unwrap())))
+                            .either(
+                                // Fall back to simple range: start:end
+                                DoubleToken
+                                    .triple(Colon, DoubleToken)
+                                    .transform(|(s, _, e)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), None))
+                            )
+                            .fold(identity, identity)
+                    )
+            )
+            .pair(
+                For.triple(LowerCaseName, In)
+                    .second()
+                    .pair(
+                        // Try stepped range first: start:end:step
+                        DoubleToken
+                            .triple(Colon, DoubleToken)
+                            .triple(Colon, DoubleToken)
+                            .transform(|((s, _, e), _, st)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), Some(st.parse::<f64>().unwrap())))
+                            .either(
+                                // Fall back to simple range: start:end
+                                DoubleToken
+                                    .triple(Colon, DoubleToken)
+                                    .transform(|(s, _, e)| (s.parse::<f64>().unwrap(), e.parse::<f64>().unwrap(), None))
+                            )
+                            .fold(identity, identity)
+                    )
+            )
+            .transform_with_state(|((expr, (x_var, (x_start, x_end, x_step))), (y_var, (y_start, y_end, y_step))), st| {
+                let x_range = match x_step {
+                    Some(step) => Range::numeric_step(st.start, st.end, x_var.clone(), x_start, x_end, step),
+                    None => Range::numeric(st.start, st.end, x_var.clone(), x_start, x_end),
+                };
+                let y_range = match y_step {
+                    Some(step) => Range::numeric_step(st.start, st.end, y_var.clone(), y_start, y_end, step),
+                    None => Range::numeric(st.start, st.end, y_var.clone(), y_start, y_end),
+                };
+                Command::new_surface3d(
+                    crate::definition::Definition::new(
+                        std::collections::HashMap::new(),
+                        std::collections::HashMap::new(),
+                    ),
+                    expr,
+                    x_var,
+                    y_var,
+                    x_range,
+                    y_range,
+                    CommandOptions::default(),
+                )
+            });
+
+        // Try 3D surface first, if it fails, try the rest
+        match surface3d_inline.or_else(simple_surface3d_inline).parse(input.clone(), state.clone()) {
+            Ok(result) => return Ok(result),
+            Err(_) => {} // Continue with original parsers
+        }
+
         // Try parsing the full command with all parts (expression)
         let full_command = EDefinition
             .pair(EExpression)

@@ -150,11 +150,94 @@ impl<T, A: Add + Mul + Neg + Div + Sub + Pow<T> + From<f64>> Value<T> for A {}
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExpressionRange1dResult(/*TODO Box<[f64]>*/ pub Vec<f64>);
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExpressionRange2d(pub Vec<f64>,pub usize,pub usize);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Expression3dResult {
+    pub data: Vec<Vec<f64>>, // data[y_index][x_index] = z_value
+    pub x_values: Vec<f64>,
+    pub y_values: Vec<f64>,
+}
+
+impl Expression3dResult {
+    pub fn new(data: Vec<Vec<f64>>, x_values: Vec<f64>, y_values: Vec<f64>) -> Self {
+        Self { data, x_values, y_values }
+    }
+    
+    pub fn x_len(&self) -> usize {
+        self.x_values.len()
+    }
+    
+    pub fn y_len(&self) -> usize {
+        self.y_values.len()
+    }
+    
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty() || self.x_values.is_empty() || self.y_values.is_empty()
+    }
+    
+    pub fn get_z(&self, x_index: usize, y_index: usize) -> Option<f64> {
+        self.data.get(y_index)?.get(x_index).copied()
+    }
+    
+    pub fn z_min(&self) -> f64 {
+        self.data.iter()
+            .flatten()
+            .fold(f64::INFINITY, |a, &b| a.min(b))
+    }
+    
+    pub fn z_max(&self) -> f64 {
+        self.data.iter()
+            .flatten()
+            .fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    }
+    
+    pub fn x_min(&self) -> f64 {
+        self.x_values.iter().fold(f64::INFINITY, |a, &b| a.min(b))
+    }
+    
+    pub fn x_max(&self) -> f64 {
+        self.x_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    }
+    
+    pub fn y_min(&self) -> f64 {
+        self.y_values.iter().fold(f64::INFINITY, |a, &b| a.min(b))
+    }
+    
+    pub fn y_max(&self) -> f64 {
+        self.y_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    }
+}
+
 impl Display for ExpressionRange1dResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Ok(self.0.iter().for_each(|x| {
             _ = write!(f, "{x} ");
         }))
+    }
+}
+impl Display for ExpressionRange2d {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Ok(self.0.iter().enumerate().for_each(|(i,x)| {
+
+            _ = write!(f, "{x} ");
+            if i == self.1{
+                _ = write!(f, "\n");
+            }
+        }))
+    }
+}
+
+
+
+impl Display for Expression3dResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "3D Surface[{}x{} points, X:[{:.2}, {:.2}], Y:[{:.2}, {:.2}], Z:[{:.2}, {:.2}]]", 
+               self.x_len(), self.y_len(), 
+               self.x_min(), self.x_max(), 
+               self.y_min(), self.y_max(), 
+               self.z_min(), self.z_max())
     }
 }
 
@@ -277,6 +360,12 @@ impl HasSameShape for ExpressionRange1dResult {
     }
 }
 
+impl HasSameShape for Expression3dResult {
+    fn has_same_shape(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
 ops_definer!(ExpressionRange1dResult,Mul,mul,*);
 ops_definer!(ExpressionRange1dResult,Div,div,/);
 ops_definer!(ExpressionRange1dResult,Add,add,+);
@@ -317,3 +406,10 @@ impl Pow<ExpressionRange1dResult> for ExpressionRange1dResult {
         }
     }
 }
+
+
+//TODO
+//ops_definer!(ExpressionRange2d,Mul,mul,*);
+//ops_definer!(ExpressionRange2d,Div,div,/);
+//ops_definer!(ExpressionRange2d,Add,add,+);
+//ops_definer!(ExpressionRange2d,Sub,sub,-);

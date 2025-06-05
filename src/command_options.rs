@@ -236,10 +236,7 @@ impl CommandOptions {
 impl Default for CommandOptions {
     fn default() -> Self {
         Self {
-            display: HashSet::from([DisplayOption::regis(
-                Localization::default(),
-                Localization::default(),
-            )]),
+            display: HashSet::new(),
             output: Default::default(),
         }
     }

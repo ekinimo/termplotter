@@ -16,7 +16,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERangeNumeric {
     fn parse(&self, input: Chars<'a>, state: State) -> RangeParseResult<'a> {
         For.triple(LowerCaseName, In)
             .second()
-            .with_error_using_state(|x, s, i| ParseErrors::Generic(s.start, s.end))
+            .with_error_using_state(|_x, s, _i| ParseErrors::Generic(s.start, s.end))
             .pair(
                 DoubleToken
                     .triple(Colon, DoubleToken)
@@ -34,7 +34,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERangeNumericStep {
     fn parse(&self, input: Chars<'a>, state: State) -> RangeParseResult<'a> {
         For.triple(LowerCaseName, In)
             .second()
-            .with_error_using_state(|x, s, i| ParseErrors::Generic(s.start, s.end))
+            .with_error_using_state(|_x, s, _i| ParseErrors::Generic(s.start, s.end))
             .pair(
                 DoubleToken
                     .triple(Colon, DoubleToken)
@@ -93,7 +93,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERange {
             .or_else(ERangeNumeric)
             .or_else(ERangeFileCol)
             .or_else(ERangeFile)
-            .with_error(|(a, b), i| b)
+            .with_error(|(_a, b), _i| b)
             .parse(input, state)
     }
 }

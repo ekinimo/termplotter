@@ -7,7 +7,6 @@ use crate::{
     command_options::{CommandOptions, ECommandOption},
     definition::EDefinition,
     expression::EExpression,
-    expression_parser::*,
     parametric2d::EParametric2D,
     parser_common::{identity, ParseErrors, State, For, In, LowerCaseName, Colon, DoubleToken},
     range::{ERange, Range},

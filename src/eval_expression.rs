@@ -4,20 +4,15 @@ use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 use crate::{
     context::Context,
     eval::{Eval, EvaluationError, Pow},
-    expression::{ExpressionSyntaxTree, HasSameShape, VariableSuperTrait},
+    expression::{ExpressionSyntaxTree, VariableSuperTrait},
     parser_common::Localization,
-    values::{ExpressionRange1dResult, PrimitiveBinary, PrimitiveTernary, PrimitiveUnary},
+    values::ExpressionRange1dResult,
 };
 
 pub struct DummyExpr<T> {
     data: PhantomData<T>,
 }
 
-impl<T> DummyExpr<T> {
-    pub fn new() -> Self {
-        Self { data: PhantomData }
-    }
-}
 
 impl<T, ContextV> Eval<ExpressionSyntaxTree<T>, ContextV, ExpressionRange1dResult>
     for DummyExpr<ExpressionRange1dResult>
@@ -51,7 +46,7 @@ fn uniq_var_count<T: VariableSuperTrait + Hash + Eq>(
             .value
             .1
             .iter()
-            .map(|t| uniq_var_count(&t, s))
+            .map(|t| uniq_var_count(t, s))
             .reduce(|x, y| x + y)
             .unwrap_or(0),
         ExpressionSyntaxTree::Sum(x) => {
@@ -247,136 +242,7 @@ fn replace_var_kind<T: VariableSuperTrait + Hash + Eq, T2: VariableSuperTrait>(
     Some(res)
 }
 
-fn replace_expr<T: VariableSuperTrait>(
-    source: &ExpressionSyntaxTree<T>,
-    expr_to_find: &ExpressionSyntaxTree<T>,
-    expr_to_paste: &ExpressionSyntaxTree<T>,
-) -> Option<ExpressionSyntaxTree<T>> {
-    if source.has_same_shape(expr_to_find) {
-        return Some(expr_to_paste.clone());
-    }
-    match source {
-        x @ ExpressionSyntaxTree::Variable(_) => Some(x.clone()),
-        x @ ExpressionSyntaxTree::Number(_) => Some(x.clone()),
-        ExpressionSyntaxTree::Fun(x) => {
-            let vals: Vec<_> = x
-                .value
-                .1
-                .iter()
-                .map(|t| replace_expr(t, expr_to_find, expr_to_paste))
-                .collect();
-            let fails = vals.iter().filter(|x| x.is_none()).count();
 
-            if fails == 0 {
-                Some(ExpressionSyntaxTree::fun(
-                    x.location.0,
-                    x.location.1,
-                    x.value.0.clone(),
-                    vals.into_iter().map(Option::unwrap).collect(),
-                ))
-            } else {
-                None
-            }
-        }
-        ExpressionSyntaxTree::Sum(x) => Some(ExpressionSyntaxTree::add(
-            x.location.0,
-            x.location.1,
-            replace_expr(&x.value.0, expr_to_find, expr_to_paste)?,
-            replace_expr(&x.value.1, expr_to_find, expr_to_paste)?,
-        )),
-        ExpressionSyntaxTree::Product(x) => Some(ExpressionSyntaxTree::mul(
-            x.location.0,
-            x.location.1,
-            replace_expr(&x.value.0, expr_to_find, expr_to_paste)?,
-            replace_expr(&x.value.1, expr_to_find, expr_to_paste)?,
-        )),
-        ExpressionSyntaxTree::Exponent(x) => Some(ExpressionSyntaxTree::exp(
-            x.location.0,
-            x.location.1,
-            replace_expr(&x.value.0, expr_to_find, expr_to_paste)?,
-            replace_expr(&x.value.1, expr_to_find, expr_to_paste)?,
-        )),
-        ExpressionSyntaxTree::Subtraction(x) => Some(ExpressionSyntaxTree::sub(
-            x.location.0,
-            x.location.1,
-            replace_expr(&x.value.0, expr_to_find, expr_to_paste)?,
-            replace_expr(&x.value.1, expr_to_find, expr_to_paste)?,
-        )),
-        ExpressionSyntaxTree::Division(x) => Some(ExpressionSyntaxTree::div(
-            x.location.0,
-            x.location.1,
-            replace_expr(&x.value.0, expr_to_find, expr_to_paste)?,
-            replace_expr(&x.value.1, expr_to_find, expr_to_paste)?,
-        )),
-        ExpressionSyntaxTree::Negation(x) => Some(ExpressionSyntaxTree::neg(
-            x.location.0,
-            x.location.1,
-            replace_expr(&x.value, expr_to_find, expr_to_paste)?,
-        )),
-    }
-}
-
-fn replace_var<T: VariableSuperTrait + Hash + Eq>(
-    e: &ExpressionSyntaxTree<T>,
-    env: &HashMap<T, ExpressionSyntaxTree<T>>,
-) -> Option<ExpressionSyntaxTree<T>> {
-    let res = match e {
-        ExpressionSyntaxTree::Variable(x) => env.get(&x.value)?.clone(),
-
-        ExpressionSyntaxTree::Number(x) => {
-            ExpressionSyntaxTree::number(x.location.0, x.location.1, x.value)
-        }
-        ExpressionSyntaxTree::Fun(x) => {
-            let vals: Vec<_> = x.value.1.iter().map(|t| replace_var(t, env)).collect();
-            let fails = vals.iter().filter(|x| x.is_none()).count();
-
-            if fails == 0 {
-                ExpressionSyntaxTree::fun(
-                    x.location.0,
-                    x.location.1,
-                    x.value.0.clone(),
-                    vals.into_iter().map(Option::unwrap).collect(),
-                )
-            } else {
-                return None;
-            }
-        }
-        ExpressionSyntaxTree::Sum(x) => ExpressionSyntaxTree::add(
-            x.location.0,
-            x.location.1,
-            replace_var(&x.value.0, env)?,
-            replace_var(&x.value.1, env)?,
-        ),
-        ExpressionSyntaxTree::Product(x) => ExpressionSyntaxTree::mul(
-            x.location.0,
-            x.location.1,
-            replace_var(&x.value.0, env)?,
-            replace_var(&x.value.1, env)?,
-        ),
-        ExpressionSyntaxTree::Exponent(x) => ExpressionSyntaxTree::exp(
-            x.location.0,
-            x.location.1,
-            replace_var(&x.value.0, env)?,
-            replace_var(&x.value.1, env)?,
-        ),
-        ExpressionSyntaxTree::Subtraction(x) => ExpressionSyntaxTree::sub(
-            x.location.0,
-            x.location.1,
-            replace_var(&x.value.0, env)?,
-            replace_var(&x.value.1, env)?,
-        ),
-        ExpressionSyntaxTree::Division(x) => ExpressionSyntaxTree::div(
-            x.location.0,
-            x.location.1,
-            replace_var(&x.value.0, env)?,
-            replace_var(&x.value.1, env)?,
-        ),
-        ExpressionSyntaxTree::Negation(x) => {
-            ExpressionSyntaxTree::neg(x.location.0, x.location.1, replace_var(&x.value, env)?)
-        }
-    };
-    Some(res)
-}
 
 fn evaluate_expression<T, ContextV>(
     e: &ExpressionSyntaxTree<T>,
@@ -695,7 +561,7 @@ where
                 Err(EvaluationError::GenericWithString(
                     location.0,
                     location.1,
-                    format!("Failed to evaluate user-defined function '{}'", function_name),
+                    format!("Failed to evaluate user-defined function '{function_name}'"),
                 ))
             }
         } else {
@@ -714,7 +580,7 @@ where
         Err(EvaluationError::GenericWithString(
             location.0,
             location.1,
-            format!("Function '{}' with arity {} is not defined", function_name, arity),
+            format!("Function '{function_name}' with arity {arity} is not defined"),
         ))
     }
 }

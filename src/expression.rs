@@ -11,7 +11,6 @@ pub trait HasSameShape {
     fn has_same_shape(&self, other: &Self) -> bool;
 }
 
-pub trait LangElement {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EVar;
@@ -91,13 +90,6 @@ impl<T: VariableSuperTrait> ExpressionSyntaxTree<T> {
 
 impl<T: Debug + Clone + Display + PartialEq + HasSameShape> VariableSuperTrait for T {}
 
-impl LangElement for EVar {}
-impl LangElement for ENum {}
-impl LangElement for EFun {}
-impl LangElement for EExp {}
-impl LangElement for EMul {}
-impl LangElement for EDiv {}
-impl LangElement for ENeg {}
 
 impl HasSameShape for String {
     fn has_same_shape(&self, other: &Self) -> bool {

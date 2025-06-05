@@ -4,8 +4,7 @@ use std::str::Chars;
 
 use parser_combinator::Parse;
 use crate::expression::{ExpressionSyntaxTree, HasSameShape, VariableSuperTrait};
-use crate::expression_parser::ExprParseResult;
-use crate::parser_common::{Localization, Node, State, ParseErrors};
+use crate::parser_common::{State, ParseErrors};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EParametric2D;
@@ -64,7 +63,7 @@ impl Display for Parametric2DResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let pairs: Vec<String> = self.x_values.iter()
             .zip(self.y_values.iter())
-            .map(|(x, y)| format!("({}, {})", x, y))
+            .map(|(x, y)| format!("({x}, {y})"))
             .collect();
         write!(f, "[{}]", pairs.join(", "))
     }
@@ -84,7 +83,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Parametric2D<String>, ParseErrors> for EPar
             .pair(EExpression)
             .pair(RParen)
             .transform(|((((_, x_expr), _), y_expr), _)| Parametric2D::new(x_expr, y_expr))
-            .with_error_using_state(|err, state, _| ParseErrors::Generic(state.start, state.end))
+            .with_error_using_state(|_err, state, _| ParseErrors::Generic(state.start, state.end))
             .parse(input, state)
     }
 }
@@ -95,12 +94,6 @@ use crate::values::ExpressionRange1dResult;
 
 pub struct DummyParametric2D<T> {
     data: std::marker::PhantomData<T>,
-}
-
-impl<T> DummyParametric2D<T> {
-    pub fn new() -> Self {
-        Self { data: std::marker::PhantomData }
-    }
 }
 
 impl<T, ContextV> Eval<Parametric2D<T>, ContextV, Parametric2DResult> for DummyParametric2D<Parametric2DResult>

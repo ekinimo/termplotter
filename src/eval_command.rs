@@ -18,10 +18,10 @@ use crate::{
     },
     eval::{Eval, EvaluationError},
     eval_expression,
-    eval_range::{DummyRange, Range2D},
+    eval_range::DummyRange,
     range::Range,
     values::{ExpressionRange1dResult, Expression3dResult},
-    parametric2d::{DummyParametric2D, Parametric2DResult},
+    parametric2d::Parametric2DResult,
 };
 
 #[derive(Clone, Debug)]
@@ -148,7 +148,7 @@ impl CommandEvaluator {
             PlotResult::Plot2D(x_result, y_result) => {
                 if command.options.display.is_empty() {
                     let output = AsciiRenderer.render(y_result, 80, 24, x_result);
-                    println!("{}", output);
+                    println!("{output}");
                 } else {
                     for display_option in &command.options.display {
                         let output = match display_option {
@@ -157,14 +157,14 @@ impl CommandEvaluator {
                             DisplayOption::ANSI(_) => AnsiRenderer.render(y_result, 80, 24, x_result),
                             DisplayOption::SIXEL(_) => SixelRenderer.render(y_result, 400, 300, x_result),
                         };
-                        println!("{}", output);
+                        println!("{output}");
                     }
                 }
             }
             PlotResult::Parametric2D(parametric_result) => {
                 if command.options.display.is_empty() {
                     let output = AsciiRenderer.render_parametric(parametric_result, 80, 24);
-                    println!("{}", output);
+                    println!("{output}");
                 } else {
                     for display_option in &command.options.display {
                         let output = match display_option {
@@ -173,14 +173,14 @@ impl CommandEvaluator {
                             DisplayOption::ANSI(_) => AnsiRenderer.render_parametric(parametric_result, 80, 24),
                             DisplayOption::SIXEL(_) => SixelRenderer.render_parametric(parametric_result, 400, 300),
                         };
-                        println!("{}", output);
+                        println!("{output}");
                     }
                 }
             }
             PlotResult::Surface3D(surface3d_result) => {
                 if command.options.display.is_empty() {
                     let output = AsciiRenderer.render_surface3d(surface3d_result, 80, 24);
-                    println!("{}", output);
+                    println!("{output}");
                 } else {
                     for display_option in &command.options.display {
                         let output = match display_option {
@@ -189,7 +189,7 @@ impl CommandEvaluator {
                             DisplayOption::ANSI(_) => AnsiRenderer.render_surface3d(surface3d_result, 80, 24),
                             DisplayOption::SIXEL(_) => SixelRenderer.render_surface3d(surface3d_result, 400, 300),
                         };
-                        println!("{}", output);
+                        println!("{output}");
                     }
                 }
             }
@@ -207,7 +207,7 @@ impl CommandEvaluator {
                     match output_option {
                         OutputOptions::CSV(node) => {
                             if let Err(e) = CsvWriter.write(&node.value, x_result, y_result, 0, 0) {
-                                eprintln!("Error saving CSV: {}", e);
+                                eprintln!("Error saving CSV: {e}");
                             } else {
                                 println!("CSV output saved to {}", node.value);
                             }
@@ -217,7 +217,7 @@ impl CommandEvaluator {
                             if let Err(e) =
                                 PpmWriter.write(&node.value.0, x_result, y_result, geom.width, geom.height)
                             {
-                                eprintln!("Error saving PPM: {}", e);
+                                eprintln!("Error saving PPM: {e}");
                             } else {
                                 println!("PPM output saved to {}", node.value.0);
                             }
@@ -227,7 +227,7 @@ impl CommandEvaluator {
                             if let Err(e) =
                                 SvgWriter.write(&node.value.0, x_result, y_result, geom.width, geom.height)
                             {
-                                eprintln!("Error saving SVG: {}", e);
+                                eprintln!("Error saving SVG: {e}");
                             } else {
                                 println!("SVG output saved to {}", node.value.0);
                             }
@@ -241,7 +241,7 @@ impl CommandEvaluator {
                                 geom.width,
                                 geom.height,
                             ) {
-                                eprintln!("Error saving LaTeX: {}", e);
+                                eprintln!("Error saving LaTeX: {e}");
                             } else {
                                 println!("LaTeX output saved to {}", node.value.0);
                             }
@@ -255,14 +255,14 @@ impl CommandEvaluator {
                                 geom.width,
                                 geom.height,
                             ) {
-                                eprintln!("Error saving Sixel: {}", e);
+                                eprintln!("Error saving Sixel: {e}");
                             } else {
                                 println!("Sixel output saved to {}", node.value.0);
                             }
                         }
                         OutputOptions::Regis(node) => {
                             if let Err(e) = RegisWriter.write(&node.value.0, x_result, y_result, 800, 800) {
-                                eprintln!("Error saving REGIS: {}", e);
+                                eprintln!("Error saving REGIS: {e}");
                             } else {
                                 println!("REGIS output saved to {}", node.value.0);
                             }
@@ -275,8 +275,8 @@ impl CommandEvaluator {
                 for output_option in &command.options.output {
                     match output_option {
                         OutputOptions::CSV(node) => {
-                            if let Err(e) = CsvWriter.write_parametric(&node.value, &parametric_result, 0, 0) {
-                                eprintln!("Error saving CSV: {}", e);
+                            if let Err(e) = CsvWriter.write_parametric(&node.value, parametric_result, 0, 0) {
+                                eprintln!("Error saving CSV: {e}");
                             } else {
                                 println!("CSV output saved to {}", node.value);
                             }
@@ -284,9 +284,9 @@ impl CommandEvaluator {
                         OutputOptions::PPM(node) => {
                             let geom = &node.value.1;
                             if let Err(e) =
-                                PpmWriter.write_parametric(&node.value.0, &parametric_result, geom.width, geom.height)
+                                PpmWriter.write_parametric(&node.value.0, parametric_result, geom.width, geom.height)
                             {
-                                eprintln!("Error saving PPM: {}", e);
+                                eprintln!("Error saving PPM: {e}");
                             } else {
                                 println!("PPM output saved to {}", node.value.0);
                             }
@@ -294,9 +294,9 @@ impl CommandEvaluator {
                         OutputOptions::SVG(node) => {
                             let geom = &node.value.1;
                             if let Err(e) =
-                                SvgWriter.write_parametric(&node.value.0, &parametric_result, geom.width, geom.height)
+                                SvgWriter.write_parametric(&node.value.0, parametric_result, geom.width, geom.height)
                             {
-                                eprintln!("Error saving SVG: {}", e);
+                                eprintln!("Error saving SVG: {e}");
                             } else {
                                 println!("SVG output saved to {}", node.value.0);
                             }
@@ -305,11 +305,11 @@ impl CommandEvaluator {
                             let geom = &node.value.1;
                             if let Err(e) = LatexWriter.write_parametric(
                                 &node.value.0,
-                                &parametric_result,
+                                parametric_result,
                                 geom.width,
                                 geom.height,
                             ) {
-                                eprintln!("Error saving LaTeX: {}", e);
+                                eprintln!("Error saving LaTeX: {e}");
                             } else {
                                 println!("LaTeX output saved to {}", node.value.0);
                             }
@@ -318,18 +318,18 @@ impl CommandEvaluator {
                             let geom = &node.value.1;
                             if let Err(e) = SixelWriter.write_parametric(
                                 &node.value.0,
-                                &parametric_result,
+                                parametric_result,
                                 geom.width,
                                 geom.height,
                             ) {
-                                eprintln!("Error saving Sixel: {}", e);
+                                eprintln!("Error saving Sixel: {e}");
                             } else {
                                 println!("Sixel output saved to {}", node.value.0);
                             }
                         }
                         OutputOptions::Regis(node) => {
-                            if let Err(e) = RegisWriter.write_parametric(&node.value.0, &parametric_result, 800, 800) {
-                                eprintln!("Error saving REGIS: {}", e);
+                            if let Err(e) = RegisWriter.write_parametric(&node.value.0, parametric_result, 800, 800) {
+                                eprintln!("Error saving REGIS: {e}");
                             } else {
                                 println!("REGIS output saved to {}", node.value.0);
                             }
@@ -342,7 +342,7 @@ impl CommandEvaluator {
                     match output_option {
                         OutputOptions::CSV(node) => {
                             if let Err(e) = CsvWriter.write_surface3d(&node.value, surface3d_result, 0, 0) {
-                                eprintln!("Error saving CSV: {}", e);
+                                eprintln!("Error saving CSV: {e}");
                             } else {
                                 println!("CSV output saved to {}", node.value);
                             }
@@ -350,7 +350,7 @@ impl CommandEvaluator {
                         OutputOptions::PPM(node) => {
                             let geom = &node.value.1;
                             if let Err(e) = PpmWriter.write_surface3d(&node.value.0, surface3d_result, geom.width, geom.height) {
-                                eprintln!("Error saving PPM: {}", e);
+                                eprintln!("Error saving PPM: {e}");
                             } else {
                                 println!("PPM output saved to {}", node.value.0);
                             }
@@ -358,7 +358,7 @@ impl CommandEvaluator {
                         OutputOptions::SVG(node) => {
                             let geom = &node.value.1;
                             if let Err(e) = SvgWriter.write_surface3d(&node.value.0, surface3d_result, geom.width, geom.height) {
-                                eprintln!("Error saving SVG: {}", e);
+                                eprintln!("Error saving SVG: {e}");
                             } else {
                                 println!("SVG output saved to {}", node.value.0);
                             }
@@ -366,7 +366,7 @@ impl CommandEvaluator {
                         OutputOptions::LaTeX(node) => {
                             let geom = &node.value.1;
                             if let Err(e) = LatexWriter.write_surface3d(&node.value.0, surface3d_result, geom.width, geom.height) {
-                                eprintln!("Error saving LaTeX: {}", e);
+                                eprintln!("Error saving LaTeX: {e}");
                             } else {
                                 println!("LaTeX output saved to {}", node.value.0);
                             }
@@ -374,14 +374,14 @@ impl CommandEvaluator {
                         OutputOptions::Sixel(node) => {
                             let geom = &node.value.1;
                             if let Err(e) = SixelWriter.write_surface3d(&node.value.0, surface3d_result, geom.width, geom.height) {
-                                eprintln!("Error saving Sixel: {}", e);
+                                eprintln!("Error saving Sixel: {e}");
                             } else {
                                 println!("Sixel output saved to {}", node.value.0);
                             }
                         }
                         OutputOptions::Regis(node) => {
                             if let Err(e) = RegisWriter.write_surface3d(&node.value.0, surface3d_result, 800, 800) {
-                                eprintln!("Error saving REGIS: {}", e);
+                                eprintln!("Error saving REGIS: {e}");
                             } else {
                                 println!("REGIS output saved to {}", node.value.0);
                             }
@@ -398,15 +398,6 @@ impl Eval<Command, (), ()> for CommandEvaluator {
         let evaluator = CommandEvaluator::new();
 
         let plot_result = evaluator.evaluate_expression(command)?;
-
-        let data_points = match &plot_result {
-            PlotResult::Plot2D(_, y_result) => y_result.0.len(),
-            PlotResult::Parametric2D(parametric_result) => parametric_result.len(),
-            PlotResult::Surface3D(surface3d_result) => surface3d_result.x_len() * surface3d_result.y_len(),
-        };
-        
-        println!("✓ Evaluation successful, {} data points", data_points);
-
         evaluator.handle_display(command, &plot_result);
         evaluator.handle_output(command, &plot_result);
 

@@ -1,6 +1,6 @@
 use crate::{
     command_options::CommandOptions, definition::Definition, expression::ExpressionSyntaxTree,
-    parametric2d::Parametric2D, range::Range, values::Expression3dResult,
+    parametric2d::Parametric2D, range::Range,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]

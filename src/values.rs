@@ -5,7 +5,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::path::Path;
 
 use crate::eval::{EvaluationError, Pow};
-use crate::expression::{HasSameShape, VariableSuperTrait};
+use crate::expression::HasSameShape;
 use crate::parser_common::Localization;
 
 pub trait PrimitiveUnary<T> {
@@ -77,7 +77,7 @@ impl<F: Fn(f64, f64) -> f64> PrimitiveBinary<ExpressionRange1dResult> for Binary
             (a, b) if a == b => arg1
                 .0
                 .into_iter()
-                .zip(arg2.0.into_iter())
+                .zip(arg2.0)
                 .map(|(a, b)| (self.func)(a, b))
                 .collect::<Vec<f64>>(),
             _ => return Err("Mismatched array lengths in binary function".into()),
@@ -112,8 +112,8 @@ impl<F: Fn(f64, f64, f64) -> f64> PrimitiveTernary<ExpressionRange1dResult> for 
             (a, b, c) if a == b && b == c => arg1
                 .0
                 .into_iter()
-                .zip(arg2.0.into_iter())
-                .zip(arg3.0.into_iter())
+                .zip(arg2.0)
+                .zip(arg3.0)
                 .map(|((val, min), max)| (self.func)(val, min, max))
                 .collect::<Vec<f64>>(),
             _ => return Err("Mismatched array lengths in ternary function".into()),
@@ -143,9 +143,6 @@ pub fn make_primitive_ternary<T, F: Fn(f64, f64, f64) -> f64 + 'static>(
     Box::new(TernaryFunction::new(f))
 }
 
-pub trait Value<T>: Add + Mul + Neg + Div + Sub + Pow<T> + From<f64> {}
-
-impl<T, A: Add + Mul + Neg + Div + Sub + Pow<T> + From<f64>> Value<T> for A {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExpressionRange1dResult(/*TODO Box<[f64]>*/ pub Vec<f64>);
@@ -212,20 +209,22 @@ impl Expression3dResult {
 
 impl Display for ExpressionRange1dResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Ok(self.0.iter().for_each(|x| {
+        self.0.iter().for_each(|x| {
             _ = write!(f, "{x} ");
-        }))
+        });
+        Ok(())
     }
 }
 impl Display for ExpressionRange2d {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Ok(self.0.iter().enumerate().for_each(|(i,x)| {
+        self.0.iter().enumerate().for_each(|(i,x)| {
 
             _ = write!(f, "{x} ");
             if i == self.1{
-                _ = write!(f, "\n");
+                _ = writeln!(f);
             }
-        }))
+        });
+        Ok(())
     }
 }
 
@@ -275,19 +274,16 @@ impl ExpressionRange1dResult {
                 if let Ok(ip) = line {
                     let ret: Vec<f64> = ip
                         .split_ascii_whitespace()
-                        .into_iter()
-                        .map(str::parse::<f64>)
-                        .filter(Result::is_ok)
-                        .map(Result::unwrap)
+                        .flat_map(str::parse::<f64>)
                         .collect();
                     rey.extend(ret);
                 } else {
                     return er;
                 }
             }
-            return Ok(Self(rey));
+            Ok(Self(rey))
         } else {
-            return er;
+            er
         }
     }
 
@@ -310,9 +306,9 @@ impl ExpressionRange1dResult {
                     return er;
                 }
             }
-            return Ok(Self(rey));
+            Ok(Self(rey))
         } else {
-            return er;
+            er
         }
     }
 
@@ -385,13 +381,13 @@ impl Pow<ExpressionRange1dResult> for ExpressionRange1dResult {
         match (self.0.len(), rhs.0.len(), self, rhs) {
             (_, 1, x, y) => {
                 x.0.iter()
-                    .map(|var| var.powf(*y.0.get(0).unwrap()))
+                    .map(|var| var.powf(*y.0.first().unwrap()))
                     .collect::<Vec<f64>>()
                     .into()
             }
             (1, _, x, y) => {
                 y.0.iter()
-                    .map(|var| (*x.0.get(0).unwrap()).powf(*var))
+                    .map(|var| (*x.0.first().unwrap()).powf(*var))
                     .collect::<Vec<f64>>()
                     .into()
             }

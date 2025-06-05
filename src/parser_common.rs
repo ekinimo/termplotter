@@ -1,12 +1,6 @@
-use parser_combinator::either::Either;
+use parser_combinator::parser::{match_anything, match_literal};
 
-use parser_combinator::either::EitherParser;
-
-use parser_combinator::parser::{match_anything, match_literal, Parser};
-use parser_combinator::triple::Triple;
-use parser_combinator::*;
-
-use std::{fmt::Display, marker::PhantomData, str::Chars};
+use std::{marker::PhantomData, str::Chars};
 
 use parser_combinator::Parse;
 
@@ -53,9 +47,6 @@ impl Localization {
         Self { line: 0, column: 0 }
     }
 
-    pub fn at(line: usize, column: usize) -> Localization {
-        Localization { line, column }
-    }
 }
 
 impl<Dummy, T: HasSameShape> HasSameShape for Node<Dummy, T> {

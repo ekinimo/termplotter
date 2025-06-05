@@ -222,6 +222,7 @@ impl OutputOptions {
 pub struct ECommandOption;
 
 #[derive(Clone, Debug)]
+#[derive(Default)]
 pub struct CommandOptions {
     pub display: HashSet<DisplayOption>,
     pub output: HashSet<OutputOptions>,
@@ -233,11 +234,3 @@ impl CommandOptions {
     }
 }
 
-impl Default for CommandOptions {
-    fn default() -> Self {
-        Self {
-            display: HashSet::new(),
-            output: Default::default(),
-        }
-    }
-}

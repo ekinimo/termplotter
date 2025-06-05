@@ -10,14 +10,13 @@ use std::{collections::HashMap, env, io::stdin};
 use parser_combinator::Parse;
 
 use crate::{
-    command::{Command, ECommand},
-    context::Context,
+    command::ECommand,
     definition::Definition,
-    eval::{Eval, EvaluationError},
+    eval::Eval,
     eval_command::evaluate_command,
     eval_expression::DummyExpr,
-    expression::{ExpressionSyntaxTree, VariableSuperTrait},
-    parser_common::{ParseErrors, State},
+    expression::ExpressionSyntaxTree,
+    parser_common::State,
     values::ExpressionRange1dResult,
 };
 
@@ -156,7 +155,7 @@ fn interactive_mode() {
                 }
             }
             Err(error) => {
-                eprintln!("Error reading input: {}", error);
+                eprintln!("Error reading input: {error}");
                 break;
             }
         }
@@ -165,8 +164,8 @@ fn interactive_mode() {
 
 fn execute_expression(expression: &str) {
     if !expression.contains("for") && !expression.contains("in") {
-        if let Ok(result) = parse_and_evaluate_simple_expression(expression) {
-            println!("Result: {}", result);
+        if let Ok(_result) = parse_and_evaluate_simple_expression(expression) {
+            //println!("Result: {result}");
             return;
         }
     }
@@ -179,13 +178,13 @@ fn execute_command(input: &str) {
 
     match ECommand.parse(input.chars(), state) {
         Ok((command, _, _)) => {
-            println!("✓ Parsed command successfully");
+            //println!("✓ Parsed command successfully");
             if let Err(error) = evaluate_command(&command) {
-                eprintln!("✗ Evaluation error: {:?}", error);
+                eprintln!("✗ Evaluation error: {error:?}");
             }
         }
         Err(error) => {
-            eprintln!("✗ Parse error: {:?}", error);
+            eprintln!("✗ Parse error: {error:?}");
 
             if input.contains("for") && input.contains("in") {
                 eprintln!("Hint: Command syntax is: [definitions] expression for var in range [with options]");
@@ -205,7 +204,7 @@ fn parse_and_evaluate_simple_expression(
     let state = State::new();
     let (expr, _, _) = EExpression
         .parse(expression.chars(), state)
-        .map_err(|e| format!("Parse error: {:?}", e))?;
+        .map_err(|e| format!("Parse error: {e:?}"))?;
 
     let mut const_map = HashMap::new();
     const_map.insert(
@@ -235,5 +234,5 @@ fn parse_and_evaluate_simple_expression(
 
     let context = Definition::new(HashMap::new(), const_map);
 
-    DummyExpr::eval(&expr, &context).map_err(|e| format!("Evaluation error: {:?}", e))
+    DummyExpr::eval(&expr, &context).map_err(|e| format!("Evaluation error: {e:?}"))
 }

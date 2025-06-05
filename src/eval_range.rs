@@ -9,11 +9,6 @@ pub struct DummyRange<T> {
     data: PhantomData<T>,
 }
 
-impl<T> DummyRange<T> {
-    pub fn new() -> Self {
-        Self { data: PhantomData }
-    }
-}
 
 impl<Context> Eval<Range, Context, ExpressionRange1dResult>
     for DummyRange<ExpressionRange1dResult>
@@ -42,11 +37,6 @@ pub struct Range2D {
     pub y_range: Range,
 }
 
-impl Range2D {
-    pub fn new(x_range: Range, y_range: Range) -> Self {
-        Self { x_range, y_range }
-    }
-}
 
 impl<Context> Eval<Range2D, Context, ExpressionRange2d> for DummyRange<ExpressionRange2d> {
     fn eval(tree: &Range2D, context: &Context) -> Result<ExpressionRange2d, EvaluationError> {

@@ -2,7 +2,7 @@ use parser_combinator::either::Either;
 
 use parser_combinator::either::EitherParser;
 
-use parser_combinator::parser::{match_anything, match_literal, Parser};
+use parser_combinator::parser::{match_anything, match_literal};
 use parser_combinator::triple::Triple;
 use parser_combinator::*;
 use std::str::Chars;

@@ -11,6 +11,7 @@ A command-line mathematical expression parser and plotter.
 
 
 ## Usage
+> **Note:** For `sixel` and `regis` outputs we suggest using `xterm`. `xterm -ti vt340` does the trick for us
 
 ### Interactive Mode
 ```bash

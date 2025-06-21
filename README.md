@@ -79,25 +79,25 @@ termplotter supports 3D surface plotting using the syntax `f(x,y) for x in range
 
 ##### Paraboloid
 ```bash
-cargo run -- "x^2 + y^2 for x in -2:2 for y in -2:2 with svg=examples/paraboloid_3d.svg"
+cargo run -- "x^2 + y^2 for x in -2:2:48 for y in -2:2:48 with svg=examples/paraboloid_3d.svg"
 ```
 <img src="examples/paraboloid_3d.svg" alt="3D Paraboloid" width="400"/>
 
 ##### Ripple Wave
 ```bash
-cargo run -- "sin(sqrt(x^2 + y^2)) for x in -4:4 for y in -4:4 with svg=examples/ripple_3d.svg"
+cargo run -- "sin(sqrt(x^2 + y^2)) for x in -4:4:48 for y in -4:4:48 with svg=examples/ripple_3d.svg"
 ```
 <img src="examples/ripple_3d.svg" alt="3D Ripple Wave" width="400"/>
 
 ##### Saddle Surface
 ```bash
-cargo run -- "cos(x) * sin(y) for x in -6:6 for y in -6:6 with svg=examples/saddle_3d.svg"
+cargo run -- "cos(x) * sin(y) for x in -6:6:48 for y in -6:6:48 with svg=examples/saddle_3d.svg"
 ```
 <img src="examples/saddle_3d.svg" alt="3D Saddle Surface" width="400"/>
 
 ##### Gaussian Bell
 ```bash
-cargo run -- "exp(-0.5*(x^2 + y^2)) for x in -3:3 for y in -3:3 with svg=examples/gaussian_3d.svg"
+cargo run -- "exp(-0.5*(x^2 + y^2)) for x in -3:3:48 for y in -3:3:48 with svg=examples/gaussian_3d.svg"
 ```
 <img src="examples/gaussian_3d.svg" alt="3D Gaussian Bell" width="400"/>
 
@@ -150,8 +150,8 @@ cargo run -- "exp(-0.5*(x^2 + y^2)) for x in -3:3 for y in -3:3 with svg=example
     `cargo run -- "(cos(t), sin(t)) for t in 0:6.28 with regis=examples/circle.regis"`
 
   - 3D Surface plots:
-    `cargo run -- "x^2 + y^2 for x in -2:2 for y in -2:2"`
-    `cargo run -- "sin(x*y) for x in -3:3 for y in -3:3 with display=ansi"`
+    `cargo run -- "x^2 + y^2 for x in -2:2:48 for y in -2:2:48"`
+    `cargo run -- "sin(x*y) for x in -3:3:48 for y in -3:3:48 with display=ansi"`
    
 ### Some Fun parametric curves
   - Circle
@@ -180,19 +180,19 @@ cargo run -- "exp(-0.5*(x^2 + y^2)) for x in -3:3 for y in -3:3 with svg=example
 
 ### Some Fun 3D surfaces
   - Paraboloid
-    `cargo run -- "x^2 + y^2 for x in -2:2 for y in -2:2"`
+    `cargo run -- "x^2 + y^2 for x in -2:2:48 for y in -2:2:48"`
 
   - Saddle
-    `cargo run -- "x^2 - y^2 for x in -2:2 for y in -2:2"`
+    `cargo run -- "x^2 - y^2 for x in -2:2:48 for y in -2:2:48"`
 
   - Ripple effect
-    `cargo run -- "sin(sqrt(x^2 + y^2)) for x in -4:4 for y in -4:4"`
+    `cargo run -- "sin(sqrt(x^2 + y^2)) for x in -4:4:48 for y in -4:4:48"`
 
   - Gaussian bell
-    `cargo run -- "exp(-0.5*(x^2 + y^2)) for x in -3:3 for y in -3:3"`
+    `cargo run -- "exp(-0.5*(x^2 + y^2)) for x in -3:3:48 for y in -3:3:48"`
 
   - Sine wave product
-    `cargo run -- "sin(x) * cos(y) for x in -6:6 for y in -6:6"`
+    `cargo run -- "sin(x) * cos(y) for x in -6:6:48 for y in -6:6:48"
 
 ## Syntax
 General syntax is as follows:

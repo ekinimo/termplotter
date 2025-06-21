@@ -152,10 +152,10 @@ impl CommandEvaluator {
                 } else {
                     for display_option in &command.options.display {
                         let output = match display_option {
-                            DisplayOption::REGIS(_) => RegisRenderer.render(y_result, 800, 600, x_result),
-                            DisplayOption::ASCII(_) => AsciiRenderer.render(y_result, 80, 24, x_result),
-                            DisplayOption::ANSI(_) => AnsiRenderer.render(y_result, 80, 24, x_result),
-                            DisplayOption::SIXEL(_) => SixelRenderer.render(y_result, 400, 300, x_result),
+                            DisplayOption::Regis(_) => RegisRenderer.render(y_result, 800, 600, x_result),
+                            DisplayOption::Ascii(_) => AsciiRenderer.render(y_result, 80, 24, x_result),
+                            DisplayOption::Ansi(_) => AnsiRenderer.render(y_result, 80, 24, x_result),
+                            DisplayOption::Sixel(_) => SixelRenderer.render(y_result, 400, 300, x_result),
                         };
                         println!("{output}");
                     }
@@ -168,10 +168,10 @@ impl CommandEvaluator {
                 } else {
                     for display_option in &command.options.display {
                         let output = match display_option {
-                            DisplayOption::REGIS(_) => RegisRenderer.render_parametric(parametric_result, 800, 600),
-                            DisplayOption::ASCII(_) => AsciiRenderer.render_parametric(parametric_result, 80, 24),
-                            DisplayOption::ANSI(_) => AnsiRenderer.render_parametric(parametric_result, 80, 24),
-                            DisplayOption::SIXEL(_) => SixelRenderer.render_parametric(parametric_result, 400, 300),
+                            DisplayOption::Regis(_) => RegisRenderer.render_parametric(parametric_result, 800, 600),
+                            DisplayOption::Ascii(_) => AsciiRenderer.render_parametric(parametric_result, 80, 24),
+                            DisplayOption::Ansi(_) => AnsiRenderer.render_parametric(parametric_result, 80, 24),
+                            DisplayOption::Sixel(_) => SixelRenderer.render_parametric(parametric_result, 400, 300),
                         };
                         println!("{output}");
                     }
@@ -184,10 +184,10 @@ impl CommandEvaluator {
                 } else {
                     for display_option in &command.options.display {
                         let output = match display_option {
-                            DisplayOption::REGIS(_) => RegisRenderer.render_surface3d(surface3d_result, 800, 600),
-                            DisplayOption::ASCII(_) => AsciiRenderer.render_surface3d(surface3d_result, 80, 24),
-                            DisplayOption::ANSI(_) => AnsiRenderer.render_surface3d(surface3d_result, 80, 24),
-                            DisplayOption::SIXEL(_) => SixelRenderer.render_surface3d(surface3d_result, 400, 300),
+                            DisplayOption::Regis(_) => RegisRenderer.render_surface3d(surface3d_result, 800, 600),
+                            DisplayOption::Ascii(_) => AsciiRenderer.render_surface3d(surface3d_result, 80, 24),
+                            DisplayOption::Ansi(_) => AnsiRenderer.render_surface3d(surface3d_result, 80, 24),
+                            DisplayOption::Sixel(_) => SixelRenderer.render_surface3d(surface3d_result, 400, 300),
                         };
                         println!("{output}");
                     }
@@ -205,14 +205,14 @@ impl CommandEvaluator {
             PlotResult::Plot2D(x_result, y_result) => {
                 for output_option in &command.options.output {
                     match output_option {
-                        OutputOptions::CSV(node) => {
+                        OutputOptions::Csv(node) => {
                             if let Err(e) = CsvWriter.write(&node.value, x_result, y_result, 0, 0) {
                                 eprintln!("Error saving CSV: {e}");
                             } else {
                                 println!("CSV output saved to {}", node.value);
                             }
                         }
-                        OutputOptions::PPM(node) => {
+                        OutputOptions::Ppm(node) => {
                             let geom = &node.value.1;
                             if let Err(e) =
                                 PpmWriter.write(&node.value.0, x_result, y_result, geom.width, geom.height)
@@ -222,7 +222,7 @@ impl CommandEvaluator {
                                 println!("PPM output saved to {}", node.value.0);
                             }
                         }
-                        OutputOptions::SVG(node) => {
+                        OutputOptions::Svg(node) => {
                             let geom = &node.value.1;
                             if let Err(e) =
                                 SvgWriter.write(&node.value.0, x_result, y_result, geom.width, geom.height)
@@ -274,14 +274,14 @@ impl CommandEvaluator {
                 
                 for output_option in &command.options.output {
                     match output_option {
-                        OutputOptions::CSV(node) => {
+                        OutputOptions::Csv(node) => {
                             if let Err(e) = CsvWriter.write_parametric(&node.value, parametric_result, 0, 0) {
                                 eprintln!("Error saving CSV: {e}");
                             } else {
                                 println!("CSV output saved to {}", node.value);
                             }
                         }
-                        OutputOptions::PPM(node) => {
+                        OutputOptions::Ppm(node) => {
                             let geom = &node.value.1;
                             if let Err(e) =
                                 PpmWriter.write_parametric(&node.value.0, parametric_result, geom.width, geom.height)
@@ -291,7 +291,7 @@ impl CommandEvaluator {
                                 println!("PPM output saved to {}", node.value.0);
                             }
                         }
-                        OutputOptions::SVG(node) => {
+                        OutputOptions::Svg(node) => {
                             let geom = &node.value.1;
                             if let Err(e) =
                                 SvgWriter.write_parametric(&node.value.0, parametric_result, geom.width, geom.height)
@@ -340,14 +340,14 @@ impl CommandEvaluator {
             PlotResult::Surface3D(surface3d_result) => {
                 for output_option in &command.options.output {
                     match output_option {
-                        OutputOptions::CSV(node) => {
+                        OutputOptions::Csv(node) => {
                             if let Err(e) = CsvWriter.write_surface3d(&node.value, surface3d_result, 0, 0) {
                                 eprintln!("Error saving CSV: {e}");
                             } else {
                                 println!("CSV output saved to {}", node.value);
                             }
                         }
-                        OutputOptions::PPM(node) => {
+                        OutputOptions::Ppm(node) => {
                             let geom = &node.value.1;
                             if let Err(e) = PpmWriter.write_surface3d(&node.value.0, surface3d_result, geom.width, geom.height) {
                                 eprintln!("Error saving PPM: {e}");
@@ -355,7 +355,7 @@ impl CommandEvaluator {
                                 println!("PPM output saved to {}", node.value.0);
                             }
                         }
-                        OutputOptions::SVG(node) => {
+                        OutputOptions::Svg(node) => {
                             let geom = &node.value.1;
                             if let Err(e) = SvgWriter.write_surface3d(&node.value.0, surface3d_result, geom.width, geom.height) {
                                 eprintln!("Error saving SVG: {e}");

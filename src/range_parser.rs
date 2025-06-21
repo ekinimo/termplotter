@@ -55,7 +55,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERangeFile {
     fn parse(&self, input: Chars<'a>, state: State) -> RangeParseResult<'a> {
         For.triple(LowerCaseName, In)
             .second()
-            .with_error_using_state(|x, s, i| ParseErrors::Generic(s.start, s.end))
+            .with_error_using_state(|_x, s, _i| ParseErrors::Generic(s.start, s.end))
             .pair(AsciiAnythingUpToSpace)
             .transform_with_state(|(var, filename), st| {
                 Range::file(st.start, st.end, var, filename)
@@ -69,7 +69,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Range, ParseErrors> for ERangeFileCol {
     fn parse(&self, input: Chars<'a>, state: State) -> RangeParseResult<'a> {
         For.triple(LowerCaseName, In)
             .second()
-            .with_error_using_state(|x, s, i| ParseErrors::Generic(s.start, s.end))
+            .with_error_using_state(|_x, s, _i| ParseErrors::Generic(s.start, s.end))
             .pair(AsciiAnythingUpToSpace)
             .with_error_using_state(|_, s, _| ParseErrors::Generic(s.start, s.end))
             .pair(

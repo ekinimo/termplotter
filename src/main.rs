@@ -1,8 +1,8 @@
 #![feature(float_erf)]
 #![feature(float_gamma)]
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
+//#![allow(dead_code)]
+//#![allow(unused_variables)]
+//#![allow(unused_imports)]
 #![allow(elided_named_lifetimes)]
 
 use std::{collections::HashMap, env, io::stdin};

@@ -69,7 +69,7 @@ impl State {
         }
     }
 
-    pub fn transit_generator<'a>(n: usize, m: usize) -> impl Fn(State) -> State {
+    pub fn transit_generator(n: usize, m: usize) -> impl Fn(State) -> State {
         move |state: State| State {
             start: state.end,
             end: Localization {
@@ -86,12 +86,12 @@ pub fn state_trans(x: State) -> State {
 
 #[derive(Clone, Debug)]
 pub enum ParseErrors {
-    ExpectedButGot(Localization, Localization, String, String),
-    Both(Localization, Localization, Box<(ParseErrors, ParseErrors)>),
-    WhiteSpace(Localization, Localization),
-    Variable(Localization, Localization),
-    Sign(Localization, Localization),
-    Generic(Localization, Localization),
+    ExpectedButGot(#[allow(dead_code)] Localization, #[allow(dead_code)] Localization, #[allow(dead_code)] String, #[allow(dead_code)] String),
+    Both(#[allow(dead_code)] Localization, #[allow(dead_code)] Localization, #[allow(dead_code)] Box<(ParseErrors, ParseErrors)>),
+    WhiteSpace(#[allow(dead_code)] Localization, #[allow(dead_code)] Localization),
+    Variable(#[allow(dead_code)] Localization, #[allow(dead_code)] Localization),
+    Sign(#[allow(dead_code)] Localization, #[allow(dead_code)] Localization),
+    Generic(#[allow(dead_code)] Localization, #[allow(dead_code)] Localization),
 }
 
 macro_rules! token_implementer {

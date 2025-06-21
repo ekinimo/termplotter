@@ -10,6 +10,11 @@ use crate::{
 
 pub type DefinitionParseResult<'a> = Result<(Definition<String>, State, Chars<'a>), ParseErrors>;
 
+type DefinitionItem = Either<
+    (String, (Vec<String>, ExpressionSyntaxTree<String>)),
+    (String, ExpressionSyntaxTree<String>),
+>;
+
 impl<'a> Parse<'a, Chars<'a>, State, Definition<String>, ParseErrors> for EDefinition {
     fn parse(&self, input: Chars<'a>, state: State) -> DefinitionParseResult<'a> {
         let const_def = LowerCaseName
@@ -48,12 +53,7 @@ impl<'a> Parse<'a, Chars<'a>, State, Definition<String>, ParseErrors> for EDefin
             .either(const_def)
             .zero_or_more()
             .transform(
-                |x: Vec<
-                    Either<
-                        (String, (Vec<String>, ExpressionSyntaxTree<String>)),
-                        (String, ExpressionSyntaxTree<String>),
-                    >,
-                >| {
+                |x: Vec<DefinitionItem>| {
                     let mut const_map = HashMap::new();
                     let mut fun_map = HashMap::new();
 

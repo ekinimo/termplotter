@@ -13,6 +13,9 @@ use crate::parser_common::*;
 pub type ExprParseResult<'a> =
     Result<(ExpressionSyntaxTree<String>, State, Chars<'a>), ParseErrors>;
 
+type OpExprPair<T> = (Either<State, State>, ExpressionSyntaxTree<T>);
+type ExprOpList<T> = (ExpressionSyntaxTree<T>, Vec<OpExprPair<T>>);
+
 /*
 macro_rules! ASTBuilder {
     ($name:ident => $production:expr  ; $transformation:expr ; $error:expr) => {
@@ -69,12 +72,7 @@ fn binop_transform<T: VariableSuperTrait>(
         ExpressionSyntaxTree<T>,
         ExpressionSyntaxTree<T>,
     ) -> ExpressionSyntaxTree<T>,
-) -> impl Fn(
-    (
-        ExpressionSyntaxTree<T>,
-        Vec<(Either<State, State>, ExpressionSyntaxTree<T>)>,
-    ),
-) -> ExpressionSyntaxTree<T> {
+) -> impl Fn(ExprOpList<T>) -> ExpressionSyntaxTree<T> {
     move |(mut left, y)| {
         if y.is_empty() {
             return left;

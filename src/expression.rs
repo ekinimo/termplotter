@@ -1,13 +1,16 @@
 use std::{
     fmt::Debug,
     fmt::{Display, Formatter},
-    usize,
 };
 
 use crate::parser_common::{Localization, Node};
 
+type BinaryOpNode<Tag, T> = Box<Node<Tag, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>;
+type UnaryOpNode<Tag, T> = Box<Node<Tag, ExpressionSyntaxTree<T>>>;
+
 pub trait VariableSuperTrait: Display + Clone + PartialEq + Debug + HasSameShape {}
 pub trait HasSameShape {
+    #[allow(dead_code)]
     fn has_same_shape(&self, other: &Self) -> bool;
 }
 
@@ -40,14 +43,14 @@ pub enum ExpressionSyntaxTree<T: VariableSuperTrait> {
     Variable(Node<EVar, T>),
     Number(Node<ENum, f64>),
     Fun(Node<EFun, (String, Vec<ExpressionSyntaxTree<T>>)>),
-    Sum(Box<Node<ESum, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>),
-    Product(Box<Node<EMul, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>),
+    Sum(BinaryOpNode<ESum, T>),
+    Product(BinaryOpNode<EMul, T>),
 
-    Exponent(Box<Node<EExp, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>),
+    Exponent(BinaryOpNode<EExp, T>),
 
-    Subtraction(Box<Node<ESub, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>),
-    Division(Box<Node<EDiv, (ExpressionSyntaxTree<T>, ExpressionSyntaxTree<T>)>>),
-    Negation(Box<Node<ENeg, ExpressionSyntaxTree<T>>>),
+    Subtraction(BinaryOpNode<ESub, T>),
+    Division(BinaryOpNode<EDiv, T>),
+    Negation(UnaryOpNode<ENeg, T>),
 }
 
 impl<T: VariableSuperTrait> ExpressionSyntaxTree<T> {

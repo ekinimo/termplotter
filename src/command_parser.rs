@@ -140,9 +140,8 @@ impl<'a> Parse<'a, Chars<'a>, State, Command, ParseErrors> for ECommand {
             });
 
         // Try 3D surface first, if it fails, try the rest
-        match surface3d_inline.or_else(simple_surface3d_inline).parse(input.clone(), state.clone()) {
-            Ok(result) => return Ok(result),
-            Err(_) => {} // Continue with original parsers
+        if let Ok(result) = surface3d_inline.or_else(simple_surface3d_inline).parse(input.clone(), state.clone()) {
+            return Ok(result);
         }
 
         // Try parsing the full command with all parts (expression)

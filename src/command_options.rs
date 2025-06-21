@@ -19,24 +19,24 @@ pub struct EDisplay;
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum DisplayOption {
-    REGIS(Node<EDisplayRegis, ()>),
-    SIXEL(Node<EDisplaySixel, ()>),
-    ANSI(Node<EDisplayAnsi, ()>),
-    ASCII(Node<EDisplayAscii, ()>),
+    Regis(Node<EDisplayRegis, ()>),
+    Sixel(Node<EDisplaySixel, ()>),
+    Ansi(Node<EDisplayAnsi, ()>),
+    Ascii(Node<EDisplayAscii, ()>),
 }
 
 impl DisplayOption {
     pub fn regis(starts: Localization, end: Localization) -> Self {
-        Self::REGIS(Node::new(starts, end, ()))
+        Self::Regis(Node::new(starts, end, ()))
     }
     pub fn sixel(starts: Localization, end: Localization) -> Self {
-        Self::SIXEL(Node::new(starts, end, ()))
+        Self::Sixel(Node::new(starts, end, ()))
     }
     pub fn ascii(starts: Localization, end: Localization) -> Self {
-        Self::ASCII(Node::new(starts, end, ()))
+        Self::Ascii(Node::new(starts, end, ()))
     }
     pub fn ansi(starts: Localization, end: Localization) -> Self {
-        Self::ANSI(Node::new(starts, end, ()))
+        Self::Ansi(Node::new(starts, end, ()))
     }
 }
 
@@ -138,17 +138,17 @@ impl Default for Geometry<EOutputRegis> {
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum OutputOptions {
-    PPM(Node<EOutputPPM, (String, Geometry<EOutputPPM>)>),
-    SVG(Node<EOutputSVG, (String, Geometry<EOutputSVG>)>),
+    Ppm(Node<EOutputPPM, (String, Geometry<EOutputPPM>)>),
+    Svg(Node<EOutputSVG, (String, Geometry<EOutputSVG>)>),
     LaTeX(Node<EOutputLaTeX, (String, Geometry<EOutputLaTeX>)>),
     Sixel(Node<EOutputSixel, (String, Geometry<EOutputSixel>)>),
     Regis(Node<EOutputRegis, (String, Geometry<EOutputRegis>)>),
-    CSV(Node<EOutputCSV, String>),
+    Csv(Node<EOutputCSV, String>),
 }
 
 impl OutputOptions {
     pub fn ppm(start: Localization, end: Localization, var: String) -> Self {
-        Self::PPM(Node::new(start, end, (var, Geometry::default())))
+        Self::Ppm(Node::new(start, end, (var, Geometry::default())))
     }
     pub fn ppm_geom(
         start: Localization,
@@ -157,10 +157,10 @@ impl OutputOptions {
         width: usize,
         height: usize,
     ) -> Self {
-        Self::PPM(Node::new(start, end, (var, Geometry::new(width, height))))
+        Self::Ppm(Node::new(start, end, (var, Geometry::new(width, height))))
     }
     pub fn svg(start: Localization, end: Localization, var: String) -> Self {
-        Self::SVG(Node::new(start, end, (var, Geometry::default())))
+        Self::Svg(Node::new(start, end, (var, Geometry::default())))
     }
     pub fn svg_geom(
         start: Localization,
@@ -169,7 +169,7 @@ impl OutputOptions {
         width: usize,
         height: usize,
     ) -> Self {
-        Self::SVG(Node::new(start, end, (var, Geometry::new(width, height))))
+        Self::Svg(Node::new(start, end, (var, Geometry::new(width, height))))
     }
 
     pub fn latex(start: Localization, end: Localization, var: String) -> Self {
@@ -214,7 +214,7 @@ impl OutputOptions {
     }
 
     pub fn csv(start: Localization, end: Localization, var: String) -> Self {
-        Self::CSV(Node::new(start, end, var))
+        Self::Csv(Node::new(start, end, var))
     }
 }
 

@@ -92,6 +92,7 @@ use crate::eval::{Eval, EvaluationError};
 use crate::context::Context;
 use crate::values::ExpressionRange1dResult;
 
+#[allow(dead_code)]
 pub struct DummyParametric2D<T> {
     data: std::marker::PhantomData<T>,
 }

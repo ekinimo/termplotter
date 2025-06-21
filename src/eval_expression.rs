@@ -28,6 +28,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 fn uniq_var_count<T: VariableSuperTrait + Hash + Eq>(
     e: &ExpressionSyntaxTree<T>,
     s: &mut std::collections::HashSet<T>,
@@ -70,7 +71,7 @@ fn uniq_var_count<T: VariableSuperTrait + Hash + Eq>(
 
 fn eval_aux<T, ContextV>(
     e: &ExpressionSyntaxTree<ExpressionRange1dResult>,
-    env: &HashMap<T, ExpressionRange1dResult>,
+    _env: &HashMap<T, ExpressionRange1dResult>,
     context: &ContextV,
 ) -> Option<ExpressionRange1dResult>
 where
@@ -87,7 +88,7 @@ where
 
             let evaluated_args: Vec<_> = args
                 .iter()
-                .map(|arg| eval_aux(arg, env, context))
+                .map(|arg| eval_aux(arg, _env, context))
                 .collect::<Option<Vec<_>>>()?;
 
             // Try primitive functions first
@@ -132,27 +133,27 @@ where
         }
         ExpressionSyntaxTree::Sum(x) => {
             let (l, r) = &x.value;
-            Some(eval_aux(l, env, context)? + eval_aux(r, env, context)?)
+            Some(eval_aux(l, _env, context)? + eval_aux(r, _env, context)?)
         }
         ExpressionSyntaxTree::Product(x) => {
             let (l, r) = &x.value;
-            Some(eval_aux(l, env, context)? * eval_aux(r, env, context)?)
+            Some(eval_aux(l, _env, context)? * eval_aux(r, _env, context)?)
         }
         ExpressionSyntaxTree::Exponent(x) => {
             let (l, r) = &x.value;
-            Some(eval_aux(l, env, context)?.pow(eval_aux(r, env, context)?))
+            Some(eval_aux(l, _env, context)?.pow(eval_aux(r, _env, context)?))
         }
         ExpressionSyntaxTree::Subtraction(x) => {
             let (l, r) = &x.value;
-            Some(eval_aux(l, env, context)? - eval_aux(r, env, context)?)
+            Some(eval_aux(l, _env, context)? - eval_aux(r, _env, context)?)
         }
         ExpressionSyntaxTree::Division(x) => {
             let (l, r) = &x.value;
-            let left = eval_aux(l, env, context)?;
-            let right = eval_aux(r, env, context)?;
+            let left = eval_aux(l, _env, context)?;
+            let right = eval_aux(r, _env, context)?;
             Some(left / right)
         }
-        ExpressionSyntaxTree::Negation(x) => Some(-eval_aux(&x.value, env, context)?),
+        ExpressionSyntaxTree::Negation(x) => Some(-eval_aux(&x.value, _env, context)?),
     }
 }
 
